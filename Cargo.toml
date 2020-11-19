@@ -1,0 +1,12 @@
+[package]
+name = "cubic-rs"
+version = "0.1.0"
+authors = ["Darnell Andries <darnell@andries.ca>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glium = "*"
+derive_more = "*"
+image = "*"
