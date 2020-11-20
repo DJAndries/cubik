@@ -1,7 +1,7 @@
 use derive_more::{Display, Error};
 use crate::draw::Vertex;
 
-const BUCKET_CAPACITY: usize = 256;
+const BUCKET_CAPACITY: usize = 384;
 
 #[derive(Debug, Display, Error)]
 pub enum QuadOctreeError {
@@ -206,6 +206,9 @@ pub fn build_quadoctree_from_triangles(octree: &mut QuadOctreeNode, vertices: &[
 			}
 		}
 	}
+
+	// add room for testing the camera vertex
+	octree.bbox.end_pos[1] += 1.;
 
 	for i in (0..indices.len()).step_by(3) {
 		insert_quadoctree_item(octree, CollisionObj {

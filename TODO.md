@@ -1,4 +1,4 @@
-- multiple objs in wavefront
-- quadtree support
 - side collisions
 - adding clipping to the ground to fix camera if moving towards ground
+- skybox
+- jumping

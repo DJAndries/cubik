@@ -21,7 +21,7 @@ use crate::collision::check_triangle_collision;
 
 fn main() {
 	let mut event_loop = glutin::event_loop::EventLoop::new();
-	let wb = glutin::window::WindowBuilder::new();
+	let wb = glutin::window::WindowBuilder::new().with_inner_size(glutin::dpi::PhysicalSize { width: 1280, height: 720});
 	let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
 	let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
@@ -61,7 +61,8 @@ fn main() {
 	
 	let mut quadoctree = QuadOctreeNode::new_tree(false);
 
-	let map_obj = crate::wavefront::load_obj("models/map.obj", &display, &mut materials, &[7., 3., 7.], Some(&mut quadoctree)).unwrap();
+	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut materials,
+		&[1., 1., 1.], Some(&mut quadoctree)).unwrap();
 
 	event_loop.run(move |ev, _, control_flow| {
 		// let next_frame_time = std::time::Instant::now() + 
@@ -114,6 +115,7 @@ fn main() {
 		camera.update(time_delta, &mut input_state);
 
 		if let Some(intersect) = check_triangle_collision(&quadoctree, &camera.position) {
+			// println!("{:?}", intersect);
 			camera.position[1] = intersect[1] + 0.38;
 		}
 
@@ -131,7 +133,9 @@ fn main() {
 
 		target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
-		basic_render(&mut target, &env_info, &cube_info, &map_obj, &main_program, &materials);
+		for o in map_obj.values() {
+			basic_render(&mut target, &env_info, &cube_info, &o, &main_program, &materials);
+		}
 
 		target.finish().unwrap();
 	});

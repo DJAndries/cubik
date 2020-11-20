@@ -38,9 +38,14 @@ fn moller_trumbore(triangle: &[[f32; 3]; 3], ray_origin: &[f32; 3], ray_directio
 
 pub fn check_triangle_collision(tree: &QuadOctreeNode, point: &[f32; 3]) -> Option<[f32; 3]> {
 	let mut result: Option<[f32; 3]> = None;
+	
+	let mut count = 0;
+
 	traverse_quadoctree(tree, point, &mut |obj: &CollisionObj| -> bool {
 		result = moller_trumbore(obj.triangle.as_ref().unwrap(), point, &[0., -1., 0.]);
+		count += 1;
 		result.is_some()
 	});
+
 	result
 }
