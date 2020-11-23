@@ -16,8 +16,9 @@ use crate::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo};
 use crate::camera::{perspective_matrix, Camera};
 use crate::cube::load_cube;
 use crate::input::InputState;
-use crate::quadoctree::QuadOctreeNode;
-use crate::collision::check_triangle_collision;
+use crate::quadoctree::{QuadOctreeNode, BoundingBox};
+use crate::collision::check_player_collision;
+use crate::math::add_vector;
 
 fn main() {
 	let mut event_loop = glutin::event_loop::EventLoop::new();
@@ -52,14 +53,13 @@ fn main() {
 	let mut t = 0.0f32;
 	let mut last_frame_time = std::time::Instant::now();
 	let mut input_state: InputState = Default::default();
-	let mut camera = Camera {
-		position: [0.0, 0.7, 0.0],
-		direction: [0.0, 0.0, 1.0],
-		camera_pitch_yaw: (0.0, -4.7)
-	};
+	let mut camera = Camera::new([0.0, 0.7, 0.0]);
 	let mut materials: Vec<MtlInfo> = Vec::new();
 	
-	let mut quadoctree = QuadOctreeNode::new_tree(false);
+	let mut quadoctree = QuadOctreeNode::new_tree(BoundingBox {
+		start_pos: [-25., -25., -25.],
+		end_pos: [25., 25., 25.]
+	}, false);
 
 	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut materials,
 		&[1., 1., 1.], Some(&mut quadoctree)).unwrap();
@@ -114,9 +114,13 @@ fn main() {
 		// cube_info.rotation[0] = t;
 		camera.update(time_delta, &mut input_state);
 
-		if let Some(intersect) = check_triangle_collision(&quadoctree, &camera.position) {
-			// println!("{:?}", intersect);
-			camera.position[1] = intersect[1] + 0.38;
+		// println!("pos: {:?}", camera.position[2]);
+		let collide_result = check_player_collision(&quadoctree, &camera.position, &camera.player_cube);
+		for poly_collide in &collide_result.polygons {
+			camera.position = add_vector(&camera.position, &poly_collide, 1.);
+		}
+		if let Some(tri_intersect) = collide_result.triangle {
+			camera.position[1] = tri_intersect[1] + 0.38;
 		}
 
 		cube_info.generate_matrix();

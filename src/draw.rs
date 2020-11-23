@@ -1,7 +1,7 @@
 use glium::{Display, Frame, Surface, DrawParameters, Program, VertexBuffer, IndexBuffer, texture::Texture2d};
 use crate::math::mult_matrix;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Vertex {
 	pub position: [f32; 3],
 	pub normal: [f32; 3],

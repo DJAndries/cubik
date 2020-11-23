@@ -1,19 +1,33 @@
 use glium::{Frame, Surface};
 use crate::input::InputState;
 use crate::math::{normalize_vector, cross_product, add_vector};
+use crate::draw::Vertex;
+use crate::cube::generate_cube_collideobj;
+use crate::quadoctree::CollisionObj;
 
 pub struct Camera {
 	pub position: [f32; 3],
 	pub direction: [f32; 3],
 
-	pub camera_pitch_yaw: (f32, f32)
+	pub camera_pitch_yaw: (f32, f32),
+	pub player_cube: CollisionObj
 }
 
 const UP: [f32; 3] = [0.0, 1.0, 0.0];
 const MOVE_RATE: f32 = 0.64;
 const MOUSE_SENSITIVITY: f32 = 0.05;
+const PLAYER_CUBE_DIM: [f32; 3] = [0.15, 0.2, 0.15];
 
 impl Camera {
+	pub fn new(position: [f32; 3]) -> Self {
+		Camera {
+			position: position,
+			direction: [0.0, 0.0, 0.0],
+			camera_pitch_yaw: (0.0, 0.0),
+			player_cube: generate_cube_collideobj(&position, &PLAYER_CUBE_DIM)
+		}
+	}
+
 	pub fn view_matrix(&self) -> [[f32; 4]; 4] {
 		let s = normalize_vector(&cross_product(&UP, &self.direction));
 
@@ -42,6 +56,7 @@ impl Camera {
 		if input_state.a { movement_vec = add_vector(&movement_vec, &direction_perp, 1.0); }
 		if input_state.d { movement_vec = add_vector(&movement_vec, &direction_perp, -1.0); }
 		self.position = add_vector(&self.position, &movement_vec, move_len);
+		self.player_cube = generate_cube_collideobj(&self.position, &PLAYER_CUBE_DIM);
 
 		if let Some(mouse_diff) = input_state.mouse_diff {
 			self.camera_pitch_yaw.1 -= mouse_diff.0 * MOUSE_SENSITIVITY;

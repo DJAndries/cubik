@@ -7,7 +7,9 @@ use std::io::{BufReader, BufRead};
 use crate::draw::{ObjDef, Vertex, load_data_to_gpu, MtlInfo};
 use glium::{Display, texture::{Texture2d, RawImage2d, TextureCreationError}};
 use derive_more::{Error, From};
-use crate::quadoctree::{QuadOctreeNode, QuadOctreeError, build_quadoctree_from_triangles};
+use crate::quadoctree::{QuadOctreeNode, QuadOctreeError, add_obj_to_quadoctree};
+
+const COLLISION_PREFIX: &str = "collision_";
 
 #[derive(Debug, derive_more::Display, Error, From)]
 pub enum WavefrontLoadError {
@@ -46,8 +48,7 @@ fn parse_texcoords(split: &mut Split<char>) -> Result<[f32; 2], WavefrontLoadErr
 }
 
 fn parse_face(split: &mut Split<char>, vertex_info: &Vec<[f32; 3]>, normal_info: &Vec<[f32; 3]>,
-	texcoord_info: &Vec<[f32; 2]>, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
-	face_index_map: &mut HashMap<[u32; 3], u32>) -> Result<(), WavefrontLoadError> {
+	texcoord_info: &Vec<[f32; 2]>, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>) -> Result<(), WavefrontLoadError> {
 
 	let mut face_indices: Vec<u32> = Vec::new();
 
@@ -73,24 +74,20 @@ fn parse_face(split: &mut Split<char>, vertex_info: &Vec<[f32; 3]>, normal_info:
 			face_index_ref[j] = face_index_comp.trim().parse()?;
 		}
 
-		face_indices.push(match face_index_map.get(&face_index_ref) {
-			None => {
-				let mut new_vert = Vertex {
-					position: vertex_info.get((face_index_ref[0] - 1) as usize)
-						.ok_or(WavefrontLoadError::BadIndexError { msg: "Vertex index does not exist" })?.clone(),
-					normal: normal_info.get((face_index_ref[2] - 1) as usize)
-						.ok_or(WavefrontLoadError::BadIndexError { msg: "Normal index does not exist" })?.clone(),
-					texcoords: [0., 0.]
-				};
-				if face_index_ref[1] > 0 {
-					new_vert.texcoords = texcoord_info.get((face_index_ref[1] - 1) as usize)
-						.ok_or(WavefrontLoadError::BadIndexError { msg: "Texcoord index does not exist" })?.clone();
-				}
-				vertices.push(new_vert);
-				(vertices.len() - 1) as u32
-			},
-			Some(face_index) => *face_index
-		});
+		let mut new_vert = Vertex {
+			position: vertex_info.get((face_index_ref[0] - 1) as usize)
+				.ok_or(WavefrontLoadError::BadIndexError { msg: "Vertex index does not exist" })?.clone(),
+			normal: normal_info.get((face_index_ref[2] - 1) as usize)
+				.ok_or(WavefrontLoadError::BadIndexError { msg: "Normal index does not exist" })?.clone(),
+			texcoords: [0., 0.]
+		};
+		if face_index_ref[1] > 0 {
+			new_vert.texcoords = texcoord_info.get((face_index_ref[1] - 1) as usize)
+				.ok_or(WavefrontLoadError::BadIndexError { msg: "Texcoord index does not exist" })?.clone();
+		}
+		vertices.push(new_vert);
+		
+		face_indices.push((vertices.len() - 1) as u32);
 	}
 
 	if split.next().is_some() {
@@ -157,20 +154,22 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 	Ok(())
 }
 
-fn upload_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>, face_index_map: &mut HashMap<[u32; 3], u32>,
+fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
 	current_mtl: &Option<u16>, quadoctree: Option<&mut &mut QuadOctreeNode>, o_name: &mut Option<String>, result: &mut HashMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
-	let mut def = load_data_to_gpu(display, &vertices, &indices);
+	let is_collision_mesh = o_name.as_ref().unwrap().starts_with(COLLISION_PREFIX);
 
-	def.material_index = current_mtl.clone();
+	if !is_collision_mesh {
+		let mut def = load_data_to_gpu(display, &vertices, &indices);
+		def.material_index = current_mtl.clone();
+		result.insert(o_name.as_ref().unwrap().clone(), def);
+	}
 
 	if let Some(quadoctree) = quadoctree {
-		build_quadoctree_from_triangles(&mut (**quadoctree), &vertices, &indices)?;
+		add_obj_to_quadoctree(&mut (**quadoctree), &vertices, &indices, is_collision_mesh)?;
 	}
 
 	vertices.clear();
 	indices.clear();
-	face_index_map.clear();
-	result.insert(o_name.as_ref().unwrap().clone(), def);
 	*o_name = None;
 	Ok(())
 }
@@ -189,7 +188,6 @@ pub fn load_obj(filename: &str, display: &Display, materials: &mut Vec<MtlInfo>,
 	let mut vertices: Vec<Vertex> = Vec::new();
 	let mut indices: Vec<u32> = Vec::new();
 
-	let mut face_index_map: HashMap<[u32; 3], u32> = HashMap::new();
 	let mut mtl_name_map: HashMap<String, u16> = HashMap::new();
 	let mut current_mtl: Option<u16> = None;
 	let mut current_o_name: Option<String> = None;
@@ -214,10 +212,10 @@ pub fn load_obj(filename: &str, display: &Display, materials: &mut Vec<MtlInfo>,
 			"vn" => normal_info.push(parse_vertex_or_normal(&mut split, &[1., 1., 1.])?),
 			"vt" => texcoord_info.push(parse_texcoords(&mut split)?),
 			"f" => parse_face(&mut split, &vertex_info, &normal_info, &texcoord_info, &mut vertices,
-				&mut indices, &mut face_index_map)?,
+				&mut indices)?,
 			"o" => {
 				if current_o_name.is_some() {
-					upload_obj(display, &mut vertices, &mut indices, &mut face_index_map, &current_mtl,
+					process_obj(display, &mut vertices, &mut indices, &current_mtl,
 						quadoctree.as_mut(), &mut current_o_name, &mut result)?;
 				}
 				current_o_name = Some(split.next()
@@ -229,7 +227,7 @@ pub fn load_obj(filename: &str, display: &Display, materials: &mut Vec<MtlInfo>,
 	}
 
 	if current_o_name.is_some() {
-		upload_obj(display, &mut vertices, &mut indices, &mut face_index_map, &current_mtl,
+		process_obj(display, &mut vertices, &mut indices, &current_mtl,
 			quadoctree.as_mut(), &mut current_o_name, &mut result)?;
 	}
 

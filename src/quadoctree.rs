@@ -14,9 +14,9 @@ pub struct BoundingBox {
 }
 
 #[derive(Clone)]
-pub struct CollisionObj {
-	// bbox: Option<BoundingBox>,
-	pub triangle: Option<[[f32; 3]; 3]>
+pub enum CollisionObj {
+	Triangle([[f32; 3]; 3]),
+	Polygon(Vec<Vertex>, [f32; 3])
 }
 
 pub struct QuadOctreeNode {
@@ -37,14 +37,11 @@ impl QuadOctreeNode {
 		}
 	}
 
-	pub fn new_tree(is_octree: bool) -> QuadOctreeNode {
+	pub fn new_tree(bbox: BoundingBox, is_octree: bool) -> QuadOctreeNode {
 		QuadOctreeNode {
 			child_nodes: None,
 			items: Vec::with_capacity(BUCKET_CAPACITY),
-			bbox: BoundingBox {
-				start_pos: [0., 0., 0.],
-				end_pos: [0., 0., 0.]
-			},
+			bbox: bbox,
 			is_octree: is_octree
 		}
 	}
@@ -127,14 +124,22 @@ fn create_sub_nodes(node: &mut QuadOctreeNode) {
 }
 
 fn obj_is_in_bbox(bbox: &BoundingBox, obj: &CollisionObj) -> bool {
-	let triangle = obj.triangle.as_ref().unwrap();
-	for vert in triangle {
-		if !(vert[0] >= bbox.start_pos[0] && vert[0] < bbox.end_pos[0]
-			&& vert[1] >= bbox.start_pos[1] && vert[1] < bbox.end_pos[1]
-			&& vert[2] >= bbox.start_pos[2] && vert[2] < bbox.end_pos[2]) {
-			return false;
+	match obj {
+		CollisionObj::Triangle(triangle) => {
+			for vert in triangle {
+				if !vert_is_in_bbox(bbox, &vert) {
+					return false;
+				}
+			}
+		},
+		CollisionObj::Polygon(vertices, ..) => {
+			for vert in vertices {
+				if !vert_is_in_bbox(bbox, &vert.position) {
+					return false;
+				}
+			}
 		}
-	}
+	};
 	true
 }
 
@@ -195,26 +200,29 @@ pub fn traverse_quadoctree<T>(node: &QuadOctreeNode, vertex: &[f32; 3], check_fu
 	return false;
 }
 
-pub fn build_quadoctree_from_triangles(octree: &mut QuadOctreeNode, vertices: &[Vertex], indices: &[u32]) -> Result<(), QuadOctreeError> {
-	for vertex in vertices {
-		for i in 0..3 {
-			if vertex.position[i] < octree.bbox.start_pos[i] {
-				octree.bbox.start_pos[i] = vertex.position[i];
-			}
-			if vertex.position[i] > octree.bbox.end_pos[i] {
-				octree.bbox.end_pos[i] = vertex.position[i] + 0.01;
-			}
+pub fn add_obj_to_quadoctree(octree: &mut QuadOctreeNode, vertices: &[Vertex], indices: &[u32], is_collision_mesh: bool) -> Result<(), QuadOctreeError> {
+
+	if is_collision_mesh {
+		let mut center = [0., 0., 0.0f32];
+		for vertex in vertices {
+			center[0] += vertex.position[0];
+			center[1] += vertex.position[1];
+			center[2] += vertex.position[2];
 		}
-	}
-
-	// add room for testing the camera vertex
-	octree.bbox.end_pos[1] += 1.;
-
-	for i in (0..indices.len()).step_by(3) {
-		insert_quadoctree_item(octree, CollisionObj {
-			triangle: Some([vertices[indices[i] as usize].position, vertices[indices[i + 1] as usize].position,
-						  vertices[indices[i + 2] as usize].position])
-		})?;
+		let vlen = vertices.len() as f32;
+		center[0] /= vlen;
+		center[1] /= vlen;
+		center[2] /= vlen;
+		insert_quadoctree_item(octree, CollisionObj::Polygon(
+			indices.iter().map(|i| vertices[*i as usize]).collect(),
+			center
+		))?;
+	} else {
+		for i in (0..indices.len()).step_by(3) {
+			insert_quadoctree_item(octree, CollisionObj::Triangle(
+				[vertices[indices[i] as usize].position, vertices[indices[i + 1] as usize].position,
+					vertices[indices[i + 2] as usize].position]))?;
+		}
 	}
 
 	Ok(())

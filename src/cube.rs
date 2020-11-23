@@ -1,38 +1,44 @@
 use glium::{Display, Frame, DrawParameters, VertexBuffer, IndexBuffer};
 use crate::draw::{Vertex, ObjDef, load_data_to_gpu};
+use crate::quadoctree::CollisionObj;
 
-const POSITIONS: [Vertex; 24] = [
-	// back face
-	Vertex { position: [-0.5, -0.5, -0.5], normal: [0.0, 0.0, -1.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, -0.5, -0.5], normal: [0.0, 0.0, -1.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, 0.5, -0.5], normal: [0.0, 0.0, -1.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, 0.5, -0.5], normal: [0.0, 0.0, -1.0], texcoords: [0., 0.] },
-	// front face
-	Vertex { position: [-0.5, -0.5, 0.5], normal: [0.0, 0.0, 1.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, -0.5, 0.5], normal: [0.0, 0.0, 1.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, 0.5, 0.5], normal: [0.0, 0.0, 1.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, 0.5, 0.5], normal: [0.0, 0.0, 1.0], texcoords: [0., 0.] },
-	// left face
-	Vertex { position: [-0.5, -0.5, 0.5], normal: [-1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, -0.5, -0.5], normal: [-1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, 0.5, -0.5], normal: [-1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, 0.5, 0.5], normal: [-1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	// right face
-	Vertex { position: [0.5, -0.5, 0.5], normal: [1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, -0.5, -0.5], normal: [1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, 0.5, -0.5], normal: [1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, 0.5, 0.5], normal: [1.0, 0.0, 0.0], texcoords: [0., 0.] },
-	// top face
-	Vertex { position: [-0.5, 0.5, 0.5], normal: [0.0, 1.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, 0.5, -0.5], normal: [0.0, 1.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, 0.5, -0.5], normal: [0.0, 1.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, 0.5, 0.5], normal: [0.0, 1.0, 0.0], texcoords: [0., 0.] },
-	// bottom face
-	Vertex { position: [-0.5, -0.5, 0.5], normal: [0.0, -1.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, -0.5, -0.5], normal: [0.0, -1.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [-0.5, -0.5, -0.5], normal: [0.0, -1.0, 0.0], texcoords: [0., 0.] },
-	Vertex { position: [0.5, -0.5, 0.5], normal: [0.0, -1.0, 0.0], texcoords: [0., 0.] },
-];
+pub fn generate_cube_vertices(pos: &[f32; 3], dim: &[f32; 3]) -> [Vertex; 24] {
+	let gen_pos = |proto: [f32; 3]| {
+		[proto[0] * dim[0] + pos[0], proto[1] * dim[1] + pos[1], proto[2] * dim[2] + pos[2]]
+	};
+	[
+		// back face
+		Vertex { position: gen_pos([-1., -1., -1.]), normal: [0., 0., -1.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., -1., -1.]), normal: [0., 0., -1.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., 1., -1.]), normal: [0., 0., -1.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., 1., -1.]), normal: [0., 0., -1.], texcoords: [0., 0.] },
+		// front face
+		Vertex { position: gen_pos([-1., -1., 1.]), normal: [0., 0., 1.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., -1., 1.]), normal: [0., 0., 1.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., 1., 1.]), normal: [0., 0., 1.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., 1., 1.]), normal: [0., 0., 1.], texcoords: [0., 0.] },
+		// left face
+		Vertex { position: gen_pos([-1., -1., 1.]), normal: [-1., 0., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., -1., -1.]), normal: [-1., 0., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., 1., -1.]), normal: [-1., 0., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., 1., 1.]), normal: [-1., 0., 0.], texcoords: [0., 0.] },
+		// right face
+		Vertex { position: gen_pos([1., -1., 1.]), normal: [1., 0., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., -1., -1.]), normal: [1., 0., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., 1., -1.]), normal: [1., 0., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., 1., 1.]), normal: [1., 0., 0.], texcoords: [0., 0.] },
+		// top face
+		Vertex { position: gen_pos([-1., 1., 1.]), normal: [0., 1., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., 1., -1.]), normal: [0., 1., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., 1., -1.]), normal: [0., 1., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., 1., 1.]), normal: [0., 1., 0.], texcoords: [0., 0.] },
+		// bottom face
+		Vertex { position: gen_pos([-1., -1., 1.]), normal: [0., -1., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., -1., -1.]), normal: [0., -1., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([-1., -1., -1.]), normal: [0., -1., 0.], texcoords: [0., 0.] },
+		Vertex { position: gen_pos([1., -1., 1.]), normal: [0., -1., 0.], texcoords: [0., 0.] },
+	]
+}
 
 const INDICES: [u32; 36] = [
 	// back face
@@ -56,5 +62,9 @@ const INDICES: [u32; 36] = [
 ];
 
 pub fn load_cube(display: &Display) -> ObjDef {
-	load_data_to_gpu(display, &POSITIONS, &INDICES)
+	load_data_to_gpu(display, &generate_cube_vertices(&[0., 0., 0.], &[1., 1., 1.]), &INDICES)
+}
+
+pub fn generate_cube_collideobj(pos: &[f32; 3], dim: &[f32; 3]) -> CollisionObj {
+	CollisionObj::Polygon(generate_cube_vertices(pos, dim).to_vec(), *pos)
 }
