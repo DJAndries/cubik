@@ -7,6 +7,8 @@ mod input;
 mod wavefront;
 mod quadoctree;
 mod collision;
+mod textures;
+mod skybox;
 
 #[macro_use]
 extern crate glium;
@@ -19,6 +21,7 @@ use crate::input::InputState;
 use crate::quadoctree::{QuadOctreeNode, BoundingBox};
 use crate::collision::check_player_collision;
 use crate::math::add_vector;
+use crate::skybox::Skybox;
 
 fn main() {
 	let mut event_loop = glutin::event_loop::EventLoop::new();
@@ -27,17 +30,18 @@ fn main() {
 	let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
 	let main_program = shaders::main_program(&display);
+	let skybox_program = shaders::skybox_program(&display);
 
 	let light_loc = [10.0, 9.0, 0.0f32];
 
-	let cube_def = load_cube(&display);
-	let mut cube_info = ObjDrawInfo {
+	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
 		color: [1.0, 1.0, 1.0],
 		rotation: [0.0, 0.0, 0.0f32],
 		scale: [1.0, 1.0, 1.0],
 		model_mat: None 
 	};
+	map_info.generate_matrix();
 
 	let params = glium::DrawParameters {
 		depth: glium::Depth {
@@ -63,6 +67,8 @@ fn main() {
 
 	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut materials,
 		&[1., 1., 1.], Some(&mut quadoctree)).unwrap();
+
+	let skybox = Skybox::new(&display, "skybox1", 512, 50.).unwrap();
 
 	event_loop.run(move |ev, _, control_flow| {
 		// let next_frame_time = std::time::Instant::now() + 
@@ -123,8 +129,6 @@ fn main() {
 			camera.position[1] = tri_intersect[1] + 0.38;
 		}
 
-		cube_info.generate_matrix();
-
 		let mut target = display.draw();
 
 		let perspective_mat = perspective_matrix(&mut target);
@@ -138,8 +142,10 @@ fn main() {
 		target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
 		for o in map_obj.values() {
-			basic_render(&mut target, &env_info, &cube_info, &o, &main_program, &materials);
+			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &materials);
 		}
+
+		skybox.draw(&mut target, &env_info, &skybox_program);
 
 		target.finish().unwrap();
 	});

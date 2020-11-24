@@ -40,29 +40,39 @@ pub fn generate_cube_vertices(pos: &[f32; 3], dim: &[f32; 3]) -> [Vertex; 24] {
 	]
 }
 
-const INDICES: [u32; 36] = [
+const INDICES: [[u32; 3]; 12] = [
 	// back face
-	0, 1, 2,
-	1, 3, 2,
+	[0, 1, 2],
+	[1, 3, 2],
 	// front face
-	6, 5, 4,
-	6, 7, 5,
+	[6, 5, 4],
+	[6, 7, 5],
 	// left face
-	8, 9, 10,
-	11, 8, 10,
+	[8, 9, 10],
+	[11, 8, 10],
 	// right face
-	14, 13, 12,
-	15, 14, 12,
+	[14, 13, 12],
+	[15, 14, 12],
 	// top face
-	18, 17, 16,
-	19, 16, 17,
+	[18, 17, 16],
+	[19, 16, 17],
 	// bottom face
-	20, 21, 22,
-	21, 20, 23
+	[20, 21, 22],
+	[21, 20, 23]
 ];
 
-pub fn load_cube(display: &Display) -> ObjDef {
-	load_data_to_gpu(display, &generate_cube_vertices(&[0., 0., 0.], &[1., 1., 1.]), &INDICES)
+pub fn load_cube(display: &Display, dim: &[f32; 3], cull_reverse: bool) -> ObjDef {
+	let mut indices: Vec<u32> = Vec::new();
+	if cull_reverse {
+		for tri in &INDICES {
+			let mut tri_clone = tri.clone();
+			tri_clone.reverse();
+			indices.extend(&tri_clone);
+		}
+	} else {
+		INDICES.iter().for_each(|i| indices.extend(i));
+	};
+	load_data_to_gpu(display, &generate_cube_vertices(&[0., 0., 0.], dim), &indices)
 }
 
 pub fn generate_cube_collideobj(pos: &[f32; 3], dim: &[f32; 3]) -> CollisionObj {

@@ -92,11 +92,11 @@ pub fn load_data_to_gpu(display: &Display, vertices: &[Vertex], indices: &[u32])
 
 pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDrawInfo, obj_def: &ObjDef, program: &Program, materials: &Vec<MtlInfo>) {
 	let uniforms = uniform! {
-		model: obj_info.model_mat.clone().unwrap(),
-		view: env_info.view_mat.clone(),
-		perspective: env_info.perspective_mat.clone(),
+		model: *obj_info.model_mat.as_ref().unwrap(),
+		view: env_info.view_mat,
+		perspective: env_info.perspective_mat,
 		u_light: env_info.light_loc,
-		shape_color: obj_info.color.clone(),
+		shape_color: obj_info.color,
 		tex: materials[obj_def.material_index.unwrap() as usize].diffuse_texture.as_ref().unwrap()
 	};
 	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, env_info.params).unwrap();

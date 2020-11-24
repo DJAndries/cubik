@@ -58,3 +58,36 @@ pub fn main_program(display: &Display) -> glium::Program {
 	"#;
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()
 }
+
+pub fn skybox_program(display: &Display) -> glium::Program {
+	let vertex_shader_src = r#"
+	#version 330 core
+
+	in vec3 position;
+
+	out vec3 v_texcoords;
+
+	uniform mat4 view;
+	uniform mat4 perspective;
+
+	void main() {
+		v_texcoords = position;
+		gl_Position = perspective * view * vec4(position, 1.0);
+	}
+	"#;
+
+	let fragment_shader_src = r#"
+	#version 330 core
+
+	in vec3 v_texcoords;
+
+	out vec4 color;
+
+	uniform samplerCube cubemap;
+
+	void main() {
+		color = texture(cubemap, v_texcoords);
+	}
+	"#;
+	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()
+}

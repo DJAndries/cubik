@@ -1,13 +1,14 @@
 use std::io;
 use std::str::Split;
-use std::path::Path;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::{BufReader, BufRead};
+use std::path::Path;
+use std::fs::File;
 use crate::draw::{ObjDef, Vertex, load_data_to_gpu, MtlInfo};
-use glium::{Display, texture::{Texture2d, RawImage2d, TextureCreationError}};
+use glium::Display;
 use derive_more::{Error, From};
 use crate::quadoctree::{QuadOctreeNode, QuadOctreeError, add_obj_to_quadoctree};
+use crate::textures::{load_texture, TextureLoadError};
 
 const COLLISION_PREFIX: &str = "collision_";
 
@@ -20,8 +21,7 @@ pub enum WavefrontLoadError {
 	IOError(io::Error),
 	FloatParseError(std::num::ParseFloatError),
 	IntParseError(std::num::ParseIntError),
-	TextureImageLoadError(image::error::ImageError),
-	TextureUploadError(TextureCreationError),
+	TextureLoadError(TextureLoadError),
 	QuadOctreeCreateError(QuadOctreeError)
 }
 
@@ -101,15 +101,7 @@ fn parse_face(split: &mut Split<char>, vertex_info: &Vec<[f32; 3]>, normal_info:
 	Ok(())
 }
 
-fn load_texture(display: &Display, path: &Path) -> Result<Texture2d, WavefrontLoadError> {
-	let f = File::open(path.clone())?;
-	let f = BufReader::new(f);
 
-	let image = image::load(f, image::ImageFormat::from_path(path.clone())?)?.to_rgba();
-	let image_dim = image.dimensions();
-	let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dim);
-	Ok(Texture2d::new(display, image)?)
-}
 
 fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Path,
 	materials: &mut Vec<MtlInfo>, mtl_name_map: &mut HashMap<String, u16>) -> Result<(), WavefrontLoadError> {
@@ -142,7 +134,7 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 					let img_filename = split.next()
 						.ok_or(WavefrontLoadError::FormatError { msg: "map_Kd does not have a filename" })?;
 					let img_path = obj_parent_dir.join(img_filename.trim());
-					materials[i as usize].diffuse_texture = Some(load_texture(display, img_path.as_path())?);
+					materials[i as usize].diffuse_texture = Some(load_texture(display, img_path.as_path(), true)?);
 				},
 				&_ => ()
 			}
