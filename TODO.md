@@ -1,4 +1,5 @@
 - refactor some funcs to be impl funcs, such as wavefront, for sharing state and cleaner code
+- only add objects with terrain prefix to octree as triangle
 - jumping
 - add circle/sphere sat collision/collisionobj, add SAT poly-circle + cicle-circle
 - performance consideration: separate quadoctrees for polygons and triangles/terrain

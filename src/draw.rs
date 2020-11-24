@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use glium::{Display, Frame, Surface, DrawParameters, Program, VertexBuffer, IndexBuffer, texture::Texture2d};
 use crate::math::mult_matrix;
 
@@ -10,9 +11,9 @@ pub struct Vertex {
 
 implement_vertex!(Vertex, position, normal, texcoords);
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct MtlInfo {
-	pub diffuse_texture: Option<Texture2d>
+	pub diffuse_texture: Option<String>
 }
 
 pub struct EnvDrawInfo<'a> {
@@ -33,7 +34,7 @@ pub struct ObjDrawInfo {
 pub struct ObjDef {
 	pub vertices: VertexBuffer<Vertex>,
 	pub indices: IndexBuffer<u32>,
-	pub material_index: Option<u16>
+	pub material: Option<MtlInfo>,
 }
 
 impl ObjDrawInfo {
@@ -86,18 +87,19 @@ pub fn load_data_to_gpu(display: &Display, vertices: &[Vertex], indices: &[u32])
 	ObjDef {
 		vertices: glium::VertexBuffer::new(display, &vertices).unwrap(),
 		indices: glium::IndexBuffer::new(display, glium::index::PrimitiveType::TrianglesList, &indices).unwrap(),
-		material_index: None
+		material: None
 	}
 }
 
-pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDrawInfo, obj_def: &ObjDef, program: &Program, materials: &Vec<MtlInfo>) {
+pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDrawInfo, obj_def: &ObjDef,
+	program: &Program, textures: &HashMap<String, Texture2d>) {
 	let uniforms = uniform! {
 		model: *obj_info.model_mat.as_ref().unwrap(),
 		view: env_info.view_mat,
 		perspective: env_info.perspective_mat,
 		u_light: env_info.light_loc,
 		shape_color: obj_info.color,
-		tex: materials[obj_def.material_index.unwrap() as usize].diffuse_texture.as_ref().unwrap()
+		tex: textures.get(obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap()).unwrap()
 	};
 	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, env_info.params).unwrap();
 }

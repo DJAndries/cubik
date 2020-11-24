@@ -5,7 +5,7 @@ use std::io::{BufReader, BufRead};
 use std::path::Path;
 use std::fs::File;
 use crate::draw::{ObjDef, Vertex, load_data_to_gpu, MtlInfo};
-use glium::Display;
+use glium::{Display, texture::Texture2d};
 use derive_more::{Error, From};
 use crate::quadoctree::{QuadOctreeNode, QuadOctreeError, add_obj_to_quadoctree};
 use crate::textures::{load_texture, TextureLoadError};
@@ -104,7 +104,7 @@ fn parse_face(split: &mut Split<char>, vertex_info: &Vec<[f32; 3]>, normal_info:
 
 
 fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Path,
-	materials: &mut Vec<MtlInfo>, mtl_name_map: &mut HashMap<String, u16>) -> Result<(), WavefrontLoadError> {
+	textures: &mut HashMap<String, Texture2d>, mtl_map: &mut HashMap<String, MtlInfo>) -> Result<(), WavefrontLoadError> {
 	let filename = obj_split.next()
 		.ok_or(WavefrontLoadError::FormatError { msg: "mtllib does not have filename" })?;
 	
@@ -113,28 +113,32 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 
 	let mut line = String::new();
 
-	let mut material_index: Option<u16> = None;
-
+	let mut current_name: Option<String> = None;
+	
 	while f.read_line(&mut line)? != 0 {
 		let mut split = line.split(' ');
 
 		let key = split.next().unwrap().trim();
 
 		if key == "newmtl" {
-			materials.push(Default::default());
-			material_index = Some((materials.len() - 1) as u16);
 			let name = split.next()
 					.ok_or(WavefrontLoadError::FormatError { msg: "newmtl does not have a name" })?.to_string();
-			mtl_name_map.insert(name, (materials.len() - 1) as u16);
+			mtl_map.insert(name.clone(), Default::default());
+			current_name = Some(name);
 		}
 
-		if let Some(i) = material_index {
+		if let Some(name) = current_name.as_ref() {
+			let mtl = mtl_map.get_mut(name).unwrap();
 			match key {
 				"map_Kd" => {
 					let img_filename = split.next()
-						.ok_or(WavefrontLoadError::FormatError { msg: "map_Kd does not have a filename" })?;
-					let img_path = obj_parent_dir.join(img_filename.trim());
-					materials[i as usize].diffuse_texture = Some(load_texture(display, img_path.as_path(), true)?);
+						.ok_or(WavefrontLoadError::FormatError { msg: "map_Kd does not have a filename" })?.to_string();
+					if !textures.contains_key(&img_filename) {
+						let img_path = obj_parent_dir.join(img_filename.trim());
+						let txt = load_texture(display, img_path.as_path(), true)?;
+						textures.insert(img_filename.clone(), txt);
+					}
+					mtl.diffuse_texture = Some(img_filename.clone());
 				},
 				&_ => ()
 			}
@@ -147,12 +151,13 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 }
 
 fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
-	current_mtl: &Option<u16>, quadoctree: Option<&mut &mut QuadOctreeNode>, o_name: &mut Option<String>, result: &mut HashMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
+	current_mtl: &Option<MtlInfo>, quadoctree: Option<&mut &mut QuadOctreeNode>,
+	o_name: &mut Option<String>, result: &mut HashMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
 	let is_collision_mesh = o_name.as_ref().unwrap().starts_with(COLLISION_PREFIX);
 
 	if !is_collision_mesh {
 		let mut def = load_data_to_gpu(display, &vertices, &indices);
-		def.material_index = current_mtl.clone();
+		def.material = Some(current_mtl.as_ref().unwrap().clone());
 		result.insert(o_name.as_ref().unwrap().clone(), def);
 	}
 
@@ -166,7 +171,7 @@ fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<
 	Ok(())
 }
 
-pub fn load_obj(filename: &str, display: &Display, materials: &mut Vec<MtlInfo>,
+pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String, Texture2d>,
 	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>) -> Result<HashMap<String, ObjDef>, WavefrontLoadError> {
 	let f = File::open(filename)?;
 	let mut f = BufReader::new(f);
@@ -180,8 +185,8 @@ pub fn load_obj(filename: &str, display: &Display, materials: &mut Vec<MtlInfo>,
 	let mut vertices: Vec<Vertex> = Vec::new();
 	let mut indices: Vec<u32> = Vec::new();
 
-	let mut mtl_name_map: HashMap<String, u16> = HashMap::new();
-	let mut current_mtl: Option<u16> = None;
+	let mut mtl_map: HashMap<String, MtlInfo> = HashMap::new();
+	let mut current_mtl: Option<MtlInfo> = None;
 	let mut current_o_name: Option<String> = None;
 
 	let mut result: HashMap<String, ObjDef> = HashMap::new();
@@ -192,12 +197,12 @@ pub fn load_obj(filename: &str, display: &Display, materials: &mut Vec<MtlInfo>,
 		match split.next().unwrap() {
 			"mtllib" => {
 				let parent_dir = Path::new(filename).parent().unwrap();
-				load_mtl(display, &mut split, &parent_dir, materials, &mut mtl_name_map)?;
+				load_mtl(display, &mut split, &parent_dir, textures, &mut mtl_map)?;
 			},
 			"usemtl" => {
 				let mtl_name = split.next()
 					.ok_or(WavefrontLoadError::FormatError { msg: "usemtl does not have a name" })?;
-				current_mtl = Some(mtl_name_map.get(mtl_name)
+				current_mtl = Some(mtl_map.get(mtl_name)
 					.ok_or(WavefrontLoadError::FormatError { msg: "Material does not exist" })?.clone());
 			},
 			"v" => vertex_info.push(parse_vertex_or_normal(&mut split, scale)?),

@@ -13,7 +13,7 @@ mod skybox;
 #[macro_use]
 extern crate glium;
 
-use glium::{glutin, Surface};
+use glium::{glutin, Surface, texture::Texture2d};
 use crate::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo};
 use crate::camera::{perspective_matrix, Camera};
 use crate::cube::load_cube;
@@ -22,6 +22,7 @@ use crate::quadoctree::{QuadOctreeNode, BoundingBox};
 use crate::collision::check_player_collision;
 use crate::math::add_vector;
 use crate::skybox::Skybox;
+use std::collections::HashMap;
 
 fn main() {
 	let mut event_loop = glutin::event_loop::EventLoop::new();
@@ -58,14 +59,14 @@ fn main() {
 	let mut last_frame_time = std::time::Instant::now();
 	let mut input_state: InputState = Default::default();
 	let mut camera = Camera::new([0.0, 0.7, 0.0]);
-	let mut materials: Vec<MtlInfo> = Vec::new();
+	let mut textures: HashMap<String, Texture2d> = HashMap::new();
 	
 	let mut quadoctree = QuadOctreeNode::new_tree(BoundingBox {
 		start_pos: [-25., -25., -25.],
 		end_pos: [25., 25., 25.]
 	}, false);
 
-	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut materials,
+	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut textures,
 		&[1., 1., 1.], Some(&mut quadoctree)).unwrap();
 
 	let skybox = Skybox::new(&display, "skybox1", 512, 50.).unwrap();
@@ -142,7 +143,7 @@ fn main() {
 		target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
 		for o in map_obj.values() {
-			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &materials);
+			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures);
 		}
 
 		skybox.draw(&mut target, &env_info, &skybox_program);
