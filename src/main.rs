@@ -9,6 +9,7 @@ mod quadoctree;
 mod collision;
 mod textures;
 mod skybox;
+mod animation;
 
 #[macro_use]
 extern crate glium;
@@ -22,6 +23,7 @@ use crate::quadoctree::{QuadOctreeNode, BoundingBox};
 use crate::collision::check_player_collision;
 use crate::math::add_vector;
 use crate::skybox::Skybox;
+use crate::animation::ObjAnimation;
 use std::collections::HashMap;
 
 fn main() {
@@ -43,6 +45,15 @@ fn main() {
 		model_mat: None 
 	};
 	map_info.generate_matrix();
+
+	let mut wolf_info = ObjDrawInfo {
+		position: [0.4, 0.8, 0.0f32],
+		color: [1.0, 1.0, 1.0],
+		rotation: [0.0, 0.0, 0.0f32],
+		scale: [1.0, 1.0, 1.0],
+		model_mat: None 
+	};
+	wolf_info.generate_matrix();
 
 	let params = glium::DrawParameters {
 		depth: glium::Depth {
@@ -68,6 +79,8 @@ fn main() {
 
 	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut textures,
 		&[1., 1., 1.], Some(&mut quadoctree)).unwrap();
+
+	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &display, &mut textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&display, "skybox1", 512, 50.).unwrap();
 
@@ -120,6 +133,7 @@ fn main() {
 		// cube_info.rotation[1] = t;
 		// cube_info.rotation[0] = t;
 		camera.update(time_delta, &mut input_state);
+		wolf_anim.update(time_delta);
 
 		// println!("pos: {:?}", camera.position[2]);
 		let collide_result = check_player_collision(&quadoctree, &camera.position, &camera.player_cube);
@@ -144,6 +158,10 @@ fn main() {
 
 		for o in map_obj.values() {
 			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures);
+		}
+
+		for o in wolf_anim.get_keyframe().values() {
+			basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures);
 		}
 
 		skybox.draw(&mut target, &env_info, &skybox_program);

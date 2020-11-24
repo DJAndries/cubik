@@ -23,5 +23,7 @@ pub fn load_texture(display: &Display, path: &Path, reversed: bool) -> Result<Te
 	} else {
 		RawImage2d::from_raw_rgba(image.into_vec(), image_dim)
 	};
-	Ok(Texture2d::new(display, image)?)
+	let result = Ok(Texture2d::new(display, image)?);
+	result
 }
+
