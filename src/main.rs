@@ -47,7 +47,7 @@ fn main() {
 	map_info.generate_matrix();
 
 	let mut wolf_info = ObjDrawInfo {
-		position: [0.4, 0.8, 0.0f32],
+		position: [0.4, 0.05, 0.0f32],
 		color: [1.0, 1.0, 1.0],
 		rotation: [0.0, 0.0, 0.0f32],
 		scale: [1.0, 1.0, 1.0],
@@ -61,7 +61,8 @@ fn main() {
 			write: true,
 			..Default::default()
 		},
-		smooth: Some(glium::draw_parameters::Smooth::Nicest),
+		blend: glium::draw_parameters::Blend::alpha_blending(),
+		// smooth: Some(glium::draw_parameters::Smooth::Nicest),
 		backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
 		..Default::default()
 	};

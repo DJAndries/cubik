@@ -1,6 +1,6 @@
 use std::io;
 use std::str::Split;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::io::{BufReader, BufRead};
 use std::path::Path;
 use std::fs::File;
@@ -152,7 +152,7 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 
 fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
 	current_mtl: &Option<MtlInfo>, quadoctree: Option<&mut &mut QuadOctreeNode>,
-	o_name: &mut Option<String>, result: &mut HashMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
+	o_name: &mut Option<String>, result: &mut BTreeMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
 	let is_collision_mesh = o_name.as_ref().unwrap().starts_with(COLLISION_PREFIX);
 
 	if !is_collision_mesh {
@@ -172,7 +172,7 @@ fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<
 }
 
 pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String, Texture2d>,
-	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>) -> Result<HashMap<String, ObjDef>, WavefrontLoadError> {
+	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
 	let f = File::open(filename)?;
 	let mut f = BufReader::new(f);
 
@@ -189,7 +189,7 @@ pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String
 	let mut current_mtl: Option<MtlInfo> = None;
 	let mut current_o_name: Option<String> = None;
 
-	let mut result: HashMap<String, ObjDef> = HashMap::new();
+	let mut result: BTreeMap<String, ObjDef> = BTreeMap::new();
 
 	while f.read_line(&mut line)? != 0 {
 		let mut split = line.split(' ');

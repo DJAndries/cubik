@@ -53,7 +53,8 @@ pub fn main_program(display: &Display) -> glium::Program {
 		vec3 half_direction = normalize(normalize(v_light) + camera_dir);
 		float specular = pow(max(dot(half_direction, normalize(v_normal)), 0.0), 256.0);
 
-		color = vec4(((ambient_val + diffuse) * shape_color * texture(tex, v_texcoords).rgb) + (specular * specular_val), 1.0);
+		vec4 text_val = texture(tex, v_texcoords);
+		color = vec4(((ambient_val + diffuse) * shape_color * text_val.rgb) + (specular * specular_val), text_val.a);
 	}
 	"#;
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()

@@ -2,7 +2,7 @@ use std::io;
 use std::fs;
 use std::path::Path;
 use glium::{Display, texture::Texture2d};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use crate::draw::ObjDef;
 use crate::wavefront::{WavefrontLoadError, load_obj};
 use derive_more::{Error, From};
@@ -14,7 +14,7 @@ pub enum ObjAnimationError {
 }
 
 pub struct ObjAnimation {
-	pub keyframes: Vec<HashMap<String, ObjDef>>,
+	pub keyframes: Vec<BTreeMap<String, ObjDef>>,
 	pub keyframe_time: f32,
 	pub current_time: f32
 }
@@ -56,7 +56,7 @@ impl ObjAnimation {
 		self.current_time += time_delta;
 	}
 
-	pub fn get_keyframe(&self) -> &HashMap<String, ObjDef> {
+	pub fn get_keyframe(&self) -> &BTreeMap<String, ObjDef> {
 		&self.keyframes[((self.current_time / self.keyframe_time) as usize) % self.keyframes.len()]
 	}
 }
