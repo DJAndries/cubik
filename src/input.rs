@@ -9,7 +9,11 @@ pub struct InputState {
 	pub s: bool,
 	pub d: bool,
 
-	pub mouse_diff: Option<(f32, f32)>
+	pub space: bool,
+
+	pub mouse_diff: Option<(f32, f32)>,
+
+	pub n_toggle: bool
 }
 
 impl InputState {
@@ -23,6 +27,8 @@ impl InputState {
 					VirtualKeyCode::W => self.w = is_pressed,
 					VirtualKeyCode::S => self.s = is_pressed,
 					VirtualKeyCode::D => self.d = is_pressed,
+					VirtualKeyCode::Space => self.space = is_pressed,
+					VirtualKeyCode::N => if !is_pressed { self.n_toggle = !self.n_toggle },
 					_ => ()
 				};
 			}
