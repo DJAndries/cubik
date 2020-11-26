@@ -16,7 +16,7 @@ mod player;
 extern crate glium;
 
 use glium::{glutin, Surface, texture::Texture2d};
-use crate::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo};
+use crate::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
 use crate::camera::perspective_matrix;
 use crate::cube::load_cube;
 use crate::input::InputState;
@@ -35,8 +35,6 @@ fn main() {
 
 	let main_program = shaders::main_program(&display);
 	let skybox_program = shaders::skybox_program(&display);
-
-	let light_loc = [10.0, 9.0, 0.0f32];
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
@@ -77,15 +75,21 @@ fn main() {
 		start_pos: [-25., -25., -25.],
 		end_pos: [25., 25., 25.]
 	}, false);
+	let mut lights: Vec<[f32; 3]> = Vec::new();
 
 	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut textures,
-		&[1., 1., 1.], Some(&mut quadoctree)).unwrap();
+		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
 	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &display, &mut textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&display, "skybox1", 512, 50.).unwrap();
 
+	let mut lights_arr: [[f32; 3]; MAX_LIGHTS] = Default::default();
+	for i in 0..lights.len() { lights_arr[i] = lights[i]; }
+
 	let mut last_frame_time = std::time::Instant::now();
+
+	let mut displace = 0.0f32;
 
 	event_loop.run(move |ev, _, control_flow| {
 		// let next_frame_time = std::time::Instant::now() + 
@@ -131,6 +135,8 @@ fn main() {
 		let time_delta = new_frame_time.duration_since(last_frame_time).as_secs_f32();
 		last_frame_time = new_frame_time;
 
+		displace += time_delta;
+
 		// t += 0.160 * time_delta;
 		// cube_info.rotation[1] = t;
 		// cube_info.rotation[0] = t;
@@ -143,18 +149,21 @@ fn main() {
 		let env_info = EnvDrawInfo {
 			perspective_mat: perspective_mat,
 			view_mat: player.camera.view_matrix(),
-			light_loc: light_loc,
+			lights: lights_arr,
 			params: &params
 		};
 
 		target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
-		for o in map_obj.values() {
-			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures);
+		for (key, o) in &map_obj {
+			let text_displace = if key.starts_with("water") {
+				Some([displace.sin() * 0.005, displace.sin() * 0.005])
+			} else { None };
+			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures, text_displace);
 		}
 
 		for o in wolf_anim.get_keyframe().values() {
-			basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures);
+			basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures, None);
 		}
 
 		skybox.draw(&mut target, &env_info, &skybox_program);

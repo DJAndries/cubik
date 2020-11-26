@@ -1,6 +1,9 @@
 use std::collections::HashMap;
-use glium::{Display, Frame, Surface, DrawParameters, Program, VertexBuffer, IndexBuffer, texture::Texture2d};
+use glium::{Display, Frame, Surface, DrawParameters, Program,
+	VertexBuffer, IndexBuffer, texture::Texture2d, uniforms::{Uniforms, UniformValue}};
 use crate::math::mult_matrix;
+
+pub const MAX_LIGHTS: usize = 4;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vertex {
@@ -20,7 +23,7 @@ pub struct EnvDrawInfo<'a> {
 	pub view_mat: [[f32; 4]; 4],
 	pub perspective_mat: [[f32; 4]; 4],
 	pub params: &'a DrawParameters<'a>,
-	pub light_loc: [f32; 3]
+	pub lights: [[f32; 3]; MAX_LIGHTS]
 }
 
 pub struct ObjDrawInfo {
@@ -35,6 +38,32 @@ pub struct ObjDef {
 	pub vertices: VertexBuffer<Vertex>,
 	pub indices: IndexBuffer<u32>,
 	pub material: Option<MtlInfo>,
+}
+
+struct BasicDrawUniforms<'a> {
+	lights: [[f32; 3]; MAX_LIGHTS],
+	light_count: i32,
+	model: [[f32; 4]; 4],
+	view: [[f32; 4]; 4],
+	perspective: [[f32; 4]; 4],
+	shape_color: [f32; 3],
+	texcoord_displacement: [f32; 2],
+	tex: &'a Texture2d
+}
+
+impl Uniforms for BasicDrawUniforms<'_> {
+	fn visit_values<'a, F: FnMut(&str, UniformValue<'a>)>(&'a self, mut func: F) {
+		for i in 0..MAX_LIGHTS {
+			func(&format!("lights[{}]", i).to_string(), UniformValue::Vec3(self.lights[i]));
+		}
+		func("light_count", UniformValue::SignedInt(self.light_count));
+		func("model", UniformValue::Mat4(self.model));
+		func("view", UniformValue::Mat4(self.view));
+		func("perspective", UniformValue::Mat4(self.perspective));
+		func("shape_color", UniformValue::Vec3(self.shape_color));
+		func("texcoord_displacement", UniformValue::Vec2(self.texcoord_displacement));
+		func("tex", UniformValue::Texture2d(self.tex, None));
+	}
 }
 
 impl ObjDrawInfo {
@@ -92,13 +121,15 @@ pub fn load_data_to_gpu(display: &Display, vertices: &[Vertex], indices: &[u32])
 }
 
 pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDrawInfo, obj_def: &ObjDef,
-	program: &Program, textures: &HashMap<String, Texture2d>) {
-	let uniforms = uniform! {
+	program: &Program, textures: &HashMap<String, Texture2d>, texcoord_displacement: Option<[f32; 2]>) {
+	let uniforms = BasicDrawUniforms {
 		model: *obj_info.model_mat.as_ref().unwrap(),
 		view: env_info.view_mat,
 		perspective: env_info.perspective_mat,
-		u_light: env_info.light_loc,
+		lights: env_info.lights,
+		light_count: env_info.lights.len() as i32,
 		shape_color: obj_info.color,
+		texcoord_displacement: texcoord_displacement.unwrap_or([0., 0.]),
 		tex: textures.get(obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap()).unwrap()
 	};
 	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, env_info.params).unwrap();

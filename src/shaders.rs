@@ -4,6 +4,8 @@ pub fn main_program(display: &Display) -> glium::Program {
 	let vertex_shader_src = r#"
 	#version 330 core
 
+	#define MAX_LIGHTS 4
+
 	in vec3 position;
 	in vec3 normal;
 	in vec2 texcoords;
@@ -12,19 +14,23 @@ pub fn main_program(display: &Display) -> glium::Program {
 	out vec3 v_position;
 	out vec3 v_light;
 	out vec2 v_texcoords;
+	out vec3 v_lights[MAX_LIGHTS];
 
 	uniform mat4 model;
 	uniform mat4 view;
 	uniform mat4 perspective;
-	uniform vec3 u_light;
+	uniform vec3 lights[MAX_LIGHTS];
+	uniform int light_count;
 
 	void main() {
 		mat4 modelview = view * model;
 		v_normal = transpose(inverse(mat3(modelview))) * normal;
 		gl_Position = perspective * modelview * vec4(position, 1.0);
-		v_position = gl_Position.xyz / gl_Position.w;
-		vec4 light_loc = view * vec4(u_light, 1.0);
-		v_light = light_loc.xyz / light_loc.w;
+		v_position = vec3(modelview * vec4(position, 1.0));
+
+		for (int i = 0; i < light_count; i++) {
+			v_lights[i] = vec3(view * vec4(lights[i], 1.0));
+		}
 		v_texcoords = texcoords;
 	}
 	"#;
@@ -32,29 +38,42 @@ pub fn main_program(display: &Display) -> glium::Program {
 	let fragment_shader_src = r#"
 	#version 330 core
 
+	#define MAX_LIGHTS 4
+
 	smooth in vec3 v_normal;
 	in vec3 v_position;
 	in vec3 v_light;
 	in vec2 v_texcoords;
+	in vec3 v_lights[MAX_LIGHTS];
 
 	out vec4 color;
 	uniform vec3 shape_color;
 
 	uniform sampler2D tex;
+	uniform vec2 texcoord_displacement;
+	uniform int light_count;
 
 	const float ambient_val = 0.1;
 	const float diffuse_val = 0.6;
 	const float specular_val = 0.1;
 
 	void main() {
-		float diffuse = max(dot(normalize(v_normal), normalize(v_light)), 0.0) * 0.7;
+		vec4 text_val = texture(tex, v_texcoords + texcoord_displacement);
 
-		vec3 camera_dir = normalize(-v_position);
-		vec3 half_direction = normalize(normalize(v_light) + camera_dir);
-		float specular = pow(max(dot(half_direction, normalize(v_normal)), 0.0), 256.0);
+		vec3 diffuse_specular = vec3(0.0, 0.0, 0.0);
+		for (int i = 0; i < light_count; i++) {
+			vec3 norm = normalize(v_normal);
+			vec3 light_dir = normalize(v_lights[i] - v_position);
+			float diffuse = max(dot(norm, light_dir), 0.0) * 0.7;
 
-		vec4 text_val = texture(tex, v_texcoords);
-		color = vec4(((ambient_val + diffuse) * shape_color * text_val.rgb) + (specular * specular_val), text_val.a);
+			vec3 view_dir = normalize(-v_position);
+			vec3 reflect_dir = reflect(-light_dir, norm);
+			float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 256.0);
+
+			diffuse_specular += (diffuse * shape_color * text_val.rgb) + (specular * specular_val);
+		}
+
+		color = vec4(diffuse_specular + (text_val.rgb * ambient_val), text_val.a);
 	}
 	"#;
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()

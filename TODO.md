@@ -1,6 +1,4 @@
 # big features
-- jumping
-- water
 - multiple lights/lights in obj?
 - materials
 - sounds
@@ -8,6 +6,7 @@
 - npc
 - net com
 - ui
+- water
 
 # small features
 - add circle/sphere sat collision/collisionobj, add SAT poly-circle + cicle-circle
