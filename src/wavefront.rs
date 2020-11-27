@@ -12,6 +12,7 @@ use crate::textures::{load_texture, TextureLoadError};
 
 const COLLISION_PREFIX: &str = "collision_";
 const LIGHT_PREFIX: &str = "light_";
+const TERRAIN_PREFIX: &str = "terrain_";
 
 #[derive(Debug, derive_more::Display, Error, From)]
 pub enum WavefrontLoadError {
@@ -29,6 +30,7 @@ pub enum WavefrontLoadError {
 #[derive(PartialEq)]
 enum MeshType {
 	Normal,
+	Terrain,
 	Collision,
 	Light
 }
@@ -165,15 +167,17 @@ fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<
 		MeshType::Collision
 	} else if o_name.as_ref().unwrap().starts_with(LIGHT_PREFIX) {
 		MeshType::Light
+	} else if o_name.as_ref().unwrap().starts_with(TERRAIN_PREFIX) {
+		MeshType::Terrain
 	} else { MeshType::Normal };
 
-	if MeshType::Normal == mesh_type {
+	if MeshType::Normal == mesh_type || MeshType::Terrain == mesh_type {
 		let mut def = load_data_to_gpu(display, &vertices, &indices);
 		def.material = Some(current_mtl.as_ref().unwrap().clone());
 		result.insert(o_name.as_ref().unwrap().clone(), def);
 	}
 
-	if MeshType::Normal == mesh_type || MeshType::Collision == mesh_type {
+	if MeshType::Terrain == mesh_type || MeshType::Collision == mesh_type {
 		if let Some(quadoctree) = quadoctree {
 			add_obj_to_quadoctree(&mut (**quadoctree), &vertices, &indices, MeshType::Collision == mesh_type)?;
 		}

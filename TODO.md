@@ -1,5 +1,4 @@
 # big features
-- multiple lights/lights in obj?
 - materials
 - sounds
 - weapon

@@ -23,7 +23,8 @@ pub struct EnvDrawInfo<'a> {
 	pub view_mat: [[f32; 4]; 4],
 	pub perspective_mat: [[f32; 4]; 4],
 	pub params: &'a DrawParameters<'a>,
-	pub lights: [[f32; 3]; MAX_LIGHTS]
+	pub lights: [[f32; 3]; MAX_LIGHTS],
+	pub light_count: usize
 }
 
 pub struct ObjDrawInfo {
@@ -127,7 +128,7 @@ pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDr
 		view: env_info.view_mat,
 		perspective: env_info.perspective_mat,
 		lights: env_info.lights,
-		light_count: env_info.lights.len() as i32,
+		light_count: env_info.light_count as i32,
 		shape_color: obj_info.color,
 		texcoord_displacement: texcoord_displacement.unwrap_or([0., 0.]),
 		tex: textures.get(obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap()).unwrap()

@@ -60,7 +60,7 @@ pub fn main_program(display: &Display) -> glium::Program {
 	void main() {
 		vec4 text_val = texture(tex, v_texcoords + texcoord_displacement);
 
-		vec3 diffuse_specular = vec3(0.0, 0.0, 0.0);
+		color = vec4(0.0, 0.0, 0.0, text_val.a);
 		for (int i = 0; i < light_count; i++) {
 			vec3 norm = normalize(v_normal);
 			vec3 light_dir = normalize(v_lights[i] - v_position);
@@ -70,10 +70,11 @@ pub fn main_program(display: &Display) -> glium::Program {
 			vec3 reflect_dir = reflect(-light_dir, norm);
 			float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 256.0);
 
-			diffuse_specular += (diffuse * shape_color * text_val.rgb) + (specular * specular_val);
-		}
+			float distance = length(v_lights[i] - v_position);
+			float attenuation = 1.0 / (distance * distance);
 
-		color = vec4(diffuse_specular + (text_val.rgb * ambient_val), text_val.a);
+			color += vec4((diffuse * shape_color * text_val.rgb) + (specular * specular_val), 0.0) * attenuation;
+		}
 	}
 	"#;
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()

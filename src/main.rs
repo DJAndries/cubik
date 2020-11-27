@@ -150,6 +150,7 @@ fn main() {
 			perspective_mat: perspective_mat,
 			view_mat: player.camera.view_matrix(),
 			lights: lights_arr,
+			light_count: lights.len(),
 			params: &params
 		};
 
