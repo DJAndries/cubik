@@ -11,6 +11,7 @@ mod textures;
 mod skybox;
 mod animation;
 mod player;
+mod fonts;
 
 #[macro_use]
 extern crate glium;
@@ -25,6 +26,7 @@ use crate::math::add_vector;
 use crate::skybox::Skybox;
 use crate::animation::ObjAnimation;
 use crate::player::Player;
+use crate::fonts::{LoadedFont, FontText, TextAlign};
 use std::collections::HashMap;
 
 fn main() {
@@ -35,6 +37,7 @@ fn main() {
 
 	let main_program = shaders::main_program(&display);
 	let skybox_program = shaders::skybox_program(&display);
+	let font_program = shaders::font_program(&display);
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
@@ -81,6 +84,9 @@ fn main() {
 		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
 	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &display, &mut textures, 0.041).unwrap();
+
+	let font = LoadedFont::load(&display, "./fonts/SourceCodePro-Light.otf", 80.).unwrap();
+	let mut font_text = FontText::new("this test".to_string(), (0., 0.5), [1., 1., 0., 1.], TextAlign::Center);
 
 	let skybox = Skybox::new(&display, "skybox1", 512, 50.).unwrap();
 
@@ -168,6 +174,8 @@ fn main() {
 		}
 
 		skybox.draw(&mut target, &env_info, &skybox_program);
+
+		font_text.draw(&mut target, &display, &font_program, &font).unwrap();
 
 		target.finish().unwrap();
 	});

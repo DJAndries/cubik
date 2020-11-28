@@ -15,6 +15,7 @@
 - fix starting direction of camera (mouse problem)
 - allow objs with no textures
 - less jittery camera
+- see todo comments
 
 # optimizations
 - refactor some funcs to be impl funcs, such as wavefront, for sharing state and cleaner code
