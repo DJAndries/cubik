@@ -23,4 +23,4 @@
 - performance consideration: separate quadoctrees for polygons and triangles/terrain
 - minor performance consideration: check for duplicating axes for sat poly-poly, negative and positive
 w to tell positive or negative
-
+- warnings

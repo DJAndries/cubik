@@ -30,7 +30,7 @@ pub struct FontText {
 	text: String,
 	pos: (f32, f32),
 	units_per_pixel: (f32, f32),
-	color: [f32; 4]
+	pub current_size: (f32, f32)
 }
 
 #[derive(Default)]
@@ -92,16 +92,16 @@ impl LoadedFont {
 }
 
 impl FontText {
-	pub fn new(text: String, pos: (f32, f32), color: [f32; 4], align: TextAlign) -> Self {
+	pub fn new(text: String, pos: (f32, f32), align: TextAlign) -> Self {
 		let text_len = text.len();
 		Self {
 			pos: pos,
 			text: text,
-			color: color,
 			align: align,
 			last_font_hash: 0,
 			units_per_pixel: (0., 0.),
 			screen_dim: (0, 0),
+			current_size: (0., 0.),
 			chars: Vec::with_capacity(text_len)
 		}
 	}
@@ -126,6 +126,8 @@ impl FontText {
 		self.screen_dim = target.get_dimensions();
 		self.units_per_pixel = (2.0f32 / (self.screen_dim.0 as f32), 2.0f32 / (self.screen_dim.1 as f32));
 
+		self.current_size = (0., 0.);
+
 		let mut pos = self.starting_position(font)?;
 		for c in self.text.chars() {
 			let mut char_result: Option<ObjDef> = None;
@@ -137,6 +139,9 @@ impl FontText {
 			if let Some(bbox) = ch.bbox {
 				let ch_size = ((bbox.width() as f32) * self.units_per_pixel.0,
 					(bbox.height() as f32) * self.units_per_pixel.1);
+				
+				if ch_size.1 > self.current_size.1 { self.current_size.1 = ch_size.1 }
+				self.current_size.0 += ch_size.0;
 
 				pos.1 -= (bbox.max.y as f32) * self.units_per_pixel.1;
 
@@ -160,7 +165,7 @@ impl FontText {
 		Ok(())
 	}
 
-	pub fn draw(&mut self, target: &mut Frame, display: &Display, program: &glium::Program, font: &LoadedFont) -> Result<(), FontError> {
+	pub fn draw(&mut self, target: &mut Frame, display: &Display, program: &glium::Program, font: &LoadedFont, color: [f32; 4]) -> Result<(), FontError> {
 		if self.screen_dim != target.get_dimensions() || self.last_font_hash != font.hash {
 			self.chars.clear();
 			self.prepare_chars(target, display, font)?;
@@ -178,7 +183,7 @@ impl FontText {
 			if let Some(obj_def) = obj_def {
 				let uniforms = uniform! {
 					tex: ch.texture.as_ref().unwrap().sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest),
-					text_color: self.color
+					text_color: color
 				};
 
 				target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, &params);

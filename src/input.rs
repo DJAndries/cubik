@@ -1,54 +1,31 @@
-use glium::Display;
-use glium::glutin::event::{KeyboardInput, VirtualKeyCode, ElementState};
-use glium::glutin::dpi::PhysicalPosition;
+use glium::{Display, Frame, Surface};
+use glium::glutin::event::{KeyboardInput, VirtualKeyCode, ElementState, WindowEvent, MouseButton};
 
-#[derive(Default)]
-pub struct InputState {
-	pub w: bool,
-	pub a: bool, 
-	pub s: bool,
-	pub d: bool,
-
-	pub space: bool,
-
-	pub mouse_diff: Option<(f32, f32)>,
-
-	pub n_toggle: bool
+pub trait InputListener {
+	fn handle_key_ev(&mut self, key: Option<VirtualKeyCode>, pressed: bool) -> bool;
+	fn handle_mouse_pos_ev(&mut self, pos: (f32, f32), display: &Display) -> bool;
+	fn handle_mouse_ev(&mut self, button: MouseButton, state: ElementState) -> bool;
 }
 
-impl InputState {
-	pub fn update_keyboard_state(&mut self, ev: &KeyboardInput) {
-		let is_pressed = ev.state == ElementState::Pressed;
-		match ev.virtual_keycode {
-			None => return,
-			Some(key) => {
-				match key {
-					VirtualKeyCode::A => self.a = is_pressed,
-					VirtualKeyCode::W => self.w = is_pressed,
-					VirtualKeyCode::S => self.s = is_pressed,
-					VirtualKeyCode::D => self.d = is_pressed,
-					VirtualKeyCode::Space => self.space = is_pressed,
-					VirtualKeyCode::N => if !is_pressed { self.n_toggle = !self.n_toggle },
-					_ => ()
-				};
-			}
-		};
+pub fn process_input_event(ev: WindowEvent, listeners: Vec<&mut InputListener>, display: &Display) -> bool {
+	for listener in listeners {
+		if match ev {
+			WindowEvent::KeyboardInput { input, .. } => {
+				listener.handle_key_ev(input.virtual_keycode, input.state == ElementState::Pressed)
+			},
+			WindowEvent::CursorMoved { position, .. } => {
+				let dim = display.gl_window().window().inner_size();
+				let ev_pos = ((position.x as f32) / (dim.width as f32) * 2. - 1.,
+					-((position.y as f32) / (dim.height as f32) * 2. - 1.));
+				listener.handle_mouse_pos_ev(ev_pos, display)
+			},
+			WindowEvent::MouseInput { state, button, .. } => {
+				listener.handle_mouse_ev(button, state)
+			},
+			_ => false
+		} {
+			return true;
+		}
 	}
-
-	pub fn update_mouse_state(&mut self, new_pos: &PhysicalPosition<f64>, display: &Display) {
-		let gl_window = display.gl_window();
-		let window = gl_window.window();
-		let winsize = window.inner_size();
-		let middle = ((winsize.width / 2) as f64, (winsize.height / 2) as f64);
-
-		// if (new_pos.x >= (middle.0 - 1.) && new_pos.x <= (middle.0 + 1.)) && (new_pos.y >= (middle.1 - 1.) && new_pos.y <= (middle.1 + 1.)) {
-		// 	return;
-		// }
-		// if (new_pos.x.abs() > 50.0f64 || new_pos.y.abs() > 50.0f64) {
-		// 	return;
-		// }
-
-		self.mouse_diff = Some(((new_pos.x - middle.0) as f32, (new_pos.y - middle.1) as f32));
-		window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1));
-	}
+	false
 }

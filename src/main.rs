@@ -12,6 +12,7 @@ mod skybox;
 mod animation;
 mod player;
 mod fonts;
+mod ui;
 
 #[macro_use]
 extern crate glium;
@@ -20,13 +21,14 @@ use glium::{glutin, Surface, texture::Texture2d};
 use crate::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
 use crate::camera::perspective_matrix;
 use crate::cube::load_cube;
-use crate::input::InputState;
+use crate::input::{InputListener, process_input_event};
 use crate::quadoctree::{QuadOctreeNode, BoundingBox};
 use crate::math::add_vector;
 use crate::skybox::Skybox;
 use crate::animation::ObjAnimation;
 use crate::player::Player;
 use crate::fonts::{LoadedFont, FontText, TextAlign};
+use crate::ui::MainMenu;
 use std::collections::HashMap;
 
 fn main() {
@@ -70,7 +72,6 @@ fn main() {
 	};
 
 	let mut t = 0.0f32;
-	let mut input_state: InputState = Default::default();
 	let mut player = Player::new([0.0, 1.5, 0.0]);
 	let mut textures: HashMap<String, Texture2d> = HashMap::new();
 	
@@ -85,9 +86,6 @@ fn main() {
 
 	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &display, &mut textures, 0.041).unwrap();
 
-	let font = LoadedFont::load(&display, "./fonts/SourceCodePro-Light.otf", 80.).unwrap();
-	let mut font_text = FontText::new("this test".to_string(), (0., 0.5), [1., 1., 0., 1.], TextAlign::Center);
-
 	let skybox = Skybox::new(&display, "skybox1", 512, 50.).unwrap();
 
 	let mut lights_arr: [[f32; 3]; MAX_LIGHTS] = Default::default();
@@ -97,11 +95,15 @@ fn main() {
 
 	let mut displace = 0.0f32;
 
+	let mut main_menu = MainMenu::new(&display).unwrap();
+	main_menu.enabled = true;
+
 	event_loop.run(move |ev, _, control_flow| {
 		// let next_frame_time = std::time::Instant::now() + 
 		// 	std::time::Duration::from_nanos(16_666_667);
 		
 		// *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
+		let listeners: Vec<&mut InputListener> = vec![&mut main_menu, &mut player];
 		*control_flow = glutin::event_loop::ControlFlow::Poll;
 		match ev {
 			glutin::event::Event::WindowEvent { event, .. } => match event {
@@ -114,13 +116,13 @@ fn main() {
 						*control_flow = glutin::event_loop::ControlFlow::Exit;
 						return;
 					}
-					input_state.update_keyboard_state(&input);
+					process_input_event(event, listeners, &display);
 					return;
 				},
-				glutin::event::WindowEvent::CursorMoved { position, .. } => {
-					input_state.update_mouse_state(&position, &display);
-				},
-				_ => return
+				_ => {
+					process_input_event(event, listeners, &display);
+					return;
+				}
 			},
 			glutin::event::Event::NewEvents(cause) => match cause {
 				glutin::event::StartCause::ResumeTimeReached { .. } => (),
@@ -146,7 +148,7 @@ fn main() {
 		// t += 0.160 * time_delta;
 		// cube_info.rotation[1] = t;
 		// cube_info.rotation[0] = t;
-		player.update(time_delta, &mut input_state, &quadoctree);
+		player.update(time_delta, &quadoctree);
 		wolf_anim.update(time_delta);
 
 		let mut target = display.draw();
@@ -160,22 +162,24 @@ fn main() {
 			params: &params
 		};
 
-		target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
+		target.clear_color_and_depth((0., 0., 0., 1.0), 1.0); 
 
-		for (key, o) in &map_obj {
-			let text_displace = if key.starts_with("water") {
-				Some([displace.sin() * 0.005, displace.sin() * 0.005])
-			} else { None };
-			basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures, text_displace);
-		}
+		main_menu.draw(&mut target, &display, &font_program);
 
-		for o in wolf_anim.get_keyframe().values() {
-			basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures, None);
-		}
+		// target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
-		skybox.draw(&mut target, &env_info, &skybox_program);
+		// for (key, o) in &map_obj {
+		// 	let text_displace = if key.starts_with("water") {
+		// 		Some([displace.sin() * 0.005, displace.sin() * 0.005])
+		// 	} else { None };
+		// 	basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures, text_displace);
+		// }
 
-		font_text.draw(&mut target, &display, &font_program, &font).unwrap();
+		// for o in wolf_anim.get_keyframe().values() {
+		// 	basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures, None);
+		// }
+
+		// skybox.draw(&mut target, &env_info, &skybox_program);
 
 		target.finish().unwrap();
 	});
