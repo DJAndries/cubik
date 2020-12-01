@@ -156,4 +156,8 @@ impl InputListener for Player {
 	fn handle_mouse_ev(&mut self, button: MouseButton, state: ElementState) -> bool {
 		false
 	}
+
+	fn handle_char_ev(&mut self, ch: char) -> bool {
+		false
+	}
 }

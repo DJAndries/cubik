@@ -2,6 +2,7 @@ use glium::{Display, Frame, Surface};
 use glium::glutin::event::{KeyboardInput, VirtualKeyCode, ElementState, WindowEvent, MouseButton};
 
 pub trait InputListener {
+	fn handle_char_ev(&mut self, ch: char) -> bool;
 	fn handle_key_ev(&mut self, key: Option<VirtualKeyCode>, pressed: bool) -> bool;
 	fn handle_mouse_pos_ev(&mut self, pos: (f32, f32), display: &Display) -> bool;
 	fn handle_mouse_ev(&mut self, button: MouseButton, state: ElementState) -> bool;
@@ -10,6 +11,9 @@ pub trait InputListener {
 pub fn process_input_event(ev: WindowEvent, listeners: Vec<&mut InputListener>, display: &Display) -> bool {
 	for listener in listeners {
 		if match ev {
+			WindowEvent::ReceivedCharacter(ch) => {
+				listener.handle_char_ev(ch)
+			},
 			WindowEvent::KeyboardInput { input, .. } => {
 				listener.handle_key_ev(input.virtual_keycode, input.state == ElementState::Pressed)
 			},

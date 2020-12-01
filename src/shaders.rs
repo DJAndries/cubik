@@ -113,7 +113,7 @@ pub fn skybox_program(display: &Display) -> glium::Program {
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()
 }
 
-pub fn font_program(display: &Display) -> glium::Program {
+pub fn ui_program(display: &Display) -> glium::Program {
 	let vertex_shader_src = r#"
 	#version 330 core
 
@@ -121,10 +121,12 @@ pub fn font_program(display: &Display) -> glium::Program {
 	in vec2 texcoords;
 
 	out vec2 v_texcoords;
+	uniform float left_clip;
 
 	void main() {
 		v_texcoords = texcoords;
 		gl_Position = vec4(position, 1.0);
+		gl_ClipDistance[0] = position.x - left_clip;
 	}
 	"#;
 
@@ -140,7 +142,7 @@ pub fn font_program(display: &Display) -> glium::Program {
 
 	void main() {
 		vec4 tex_val = texture(tex, v_texcoords);
-		color = vec4(text_color.rgb, tex_val.y * text_color.a);
+		color = vec4(text_color.rgb * tex_val.rgb, tex_val.a * text_color.a);
 	}
 	"#;
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()

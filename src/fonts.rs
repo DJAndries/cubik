@@ -28,15 +28,16 @@ pub struct FontText {
 	last_font_hash: u64,
 	align: TextAlign,
 	text: String,
+	size: f32,
 	pos: (f32, f32),
-	units_per_pixel: (f32, f32),
-	pub current_size: (f32, f32)
+	pub left_clip: f32
 }
 
 #[derive(Default)]
 pub struct LoadedFont {
 	hash: u64, 
-	chars: HashMap<char, FontChar>
+	chars: HashMap<char, FontChar>,
+	pub font_size: f32
 }
 
 #[derive(Debug, derive_more::Display, Error, From)]
@@ -55,11 +56,11 @@ impl LoadedFont {
 
 		let font = Font::try_from_vec(f_contents).ok_or(FontError::LoadError)?;
 		let scale = Scale::uniform(font_size);
-		
+
 		let mut hasher = DefaultHasher::new();
 		hasher.write(filename.as_bytes());
 		hasher.write_u32(font_size.to_bits());
-		let mut result = Self { hash: hasher.finish(), ..Default::default() };
+		let mut result = Self { hash: hasher.finish(), font_size: font_size, ..Default::default() };
 
 		for ch in b' '..=b'~' {
 			let glyph = font.glyph(ch as char).scaled(scale);
@@ -68,17 +69,18 @@ impl LoadedFont {
 			let mut char_result = FontChar { texture: None, bbox: None, h_metrics: h_metrics };
 			if let Some(positioned_box) = positioned.pixel_bounding_box() {
 				let glyph_size = (positioned_box.width() as usize, positioned_box.height() as usize);
-				let mut glyph_data = vec![0u8; glyph_size.1 * glyph_size.0 * 3];
+				let mut glyph_data = vec![0u8; glyph_size.1 * glyph_size.0 * 4];
 				positioned.draw(|x, y, v| {
 					let val = (v * 255.) as u8;
-					let index = ((y * (glyph_size.0 as u32) + x) * 3) as usize;
-					glyph_data[index] = val;
-					glyph_data[index + 1] = val;
-					glyph_data[index + 2] = val;
+					let index = ((y * (glyph_size.0 as u32) + x) * 4) as usize;
+					glyph_data[index] = 255;
+					glyph_data[index + 1] = 255;
+					glyph_data[index + 2] = 255;
+					glyph_data[index + 3] = val;
 				});
 
 				let txt = Texture2d::new(display,
-					RawImage2d::from_raw_rgb_reversed(&glyph_data, (glyph_size.0 as u32, glyph_size.1 as u32)))?;
+					RawImage2d::from_raw_rgba_reversed(&glyph_data, (glyph_size.0 as u32, glyph_size.1 as u32)))?;
 
 				char_result.texture = Some(txt);
 				char_result.bbox = Some(positioned_box);
@@ -92,75 +94,75 @@ impl LoadedFont {
 }
 
 impl FontText {
-	pub fn new(text: String, pos: (f32, f32), align: TextAlign) -> Self {
+	pub fn new(text: String, size: f32, pos: (f32, f32), align: TextAlign) -> Self {
 		let text_len = text.len();
 		Self {
 			pos: pos,
 			text: text,
 			align: align,
+			size: size,
 			last_font_hash: 0,
-			units_per_pixel: (0., 0.),
 			screen_dim: (0, 0),
-			current_size: (0., 0.),
-			chars: Vec::with_capacity(text_len)
+			chars: Vec::with_capacity(text_len),
+			left_clip: 0.
 		}
 	}
-
-	fn starting_position(&mut self, font: &LoadedFont) -> Result<(f32, f32), FontError> {
+	
+	pub fn measure_width(&mut self, target: &Frame, font: &LoadedFont) -> Result<(f32, f32), FontError> {
+		self.screen_dim = target.get_dimensions();
+		let hor_size = (self.screen_dim.1 as f32) / (self.screen_dim.0 as f32) * self.size;
 		let mut width = 0.0f32;
 		for c in self.text.chars() {
 			let ch = font.chars.get(&c).ok_or(FontError::CharNotAvailable)?;
 			
-			width += ch.h_metrics.advance_width * self.units_per_pixel.0;
+			width += ch.h_metrics.advance_width / font.font_size * hor_size;
 		}
 
+		Ok((width, hor_size))
+	}
+
+	fn starting_position(&mut self, target: &Frame, font: &LoadedFont) -> Result<((f32, f32), f32), FontError> {
+		let (width, hor_size) = self.measure_width(target, font)?;
 		let x_offset: f32 = match self.align {
 			TextAlign::Left => 0.,
 			TextAlign::Right => width,
 			TextAlign::Center => width / 2.
 		};
-		Ok((self.pos.0 - x_offset, self.pos.1))
+		Ok(((self.pos.0 - x_offset, self.pos.1), hor_size))
 	}
 
 	fn prepare_chars(&mut self, target: &Frame, display: &Display, font: &LoadedFont) -> Result<(), FontError> {
-		self.screen_dim = target.get_dimensions();
-		self.units_per_pixel = (2.0f32 / (self.screen_dim.0 as f32), 2.0f32 / (self.screen_dim.1 as f32));
-
-		self.current_size = (0., 0.);
-
-		let mut pos = self.starting_position(font)?;
+		let (starting_pos, hor_size) = self.starting_position(target, font)?;
+		let mut pos = starting_pos;
 		for c in self.text.chars() {
 			let mut char_result: Option<ObjDef> = None;
 
 			let ch = font.chars.get(&c).ok_or(FontError::CharNotAvailable)?;
 
-			pos.0 += ch.h_metrics.left_side_bearing * self.units_per_pixel.0;
+			pos.0 += ch.h_metrics.left_side_bearing / font.font_size * hor_size;
 
 			if let Some(bbox) = ch.bbox {
-				let ch_size = ((bbox.width() as f32) * self.units_per_pixel.0,
-					(bbox.height() as f32) * self.units_per_pixel.1);
-				
-				if ch_size.1 > self.current_size.1 { self.current_size.1 = ch_size.1 }
-				self.current_size.0 += ch_size.0;
+				let ch_size = (bbox.width() as f32, bbox.height() as f32);
+				let real_size = (ch_size.0 / font.font_size * hor_size, ch_size.1 / font.font_size * self.size);
 
-				pos.1 -= (bbox.max.y as f32) * self.units_per_pixel.1;
+				pos.1 -= (bbox.max.y as f32) / font.font_size * self.size;
 
 				let vertices = [
 					Vertex { position: [pos.0, pos.1, 0.], normal: [0., 0., -1.], texcoords: [0., 0.] },
-					Vertex { position: [pos.0 + ch_size.0, pos.1, 0.], normal: [0., 0., -1.], texcoords: [1., 0.] },
-					Vertex { position: [pos.0 + ch_size.0, pos.1 + ch_size.1, 0.], normal: [0., 0., -1.], texcoords: [1., 1.] },
-					Vertex { position: [pos.0, pos.1 + ch_size.1, 0.], normal: [0., 0., -1.], texcoords: [0., 1.] }
+					Vertex { position: [pos.0 + real_size.0, pos.1, 0.], normal: [0., 0., -1.], texcoords: [1., 0.] },
+					Vertex { position: [pos.0 + real_size.0, pos.1 + real_size.1, 0.], normal: [0., 0., -1.], texcoords: [1., 1.] },
+					Vertex { position: [pos.0, pos.1 + real_size.1, 0.], normal: [0., 0., -1.], texcoords: [0., 1.] }
 				];
 				
 				let indices = [0, 1, 2, 0, 2, 3];
 
 				char_result = Some(load_data_to_gpu(display, &vertices, &indices));
 
-				pos.1 += (bbox.max.y as f32) * self.units_per_pixel.1;
+				pos.1 += (bbox.max.y as f32) / font.font_size * self.size;
 			}
 			self.chars.push((c, char_result));
 
-			pos.0 += (ch.h_metrics.advance_width - ch.h_metrics.left_side_bearing) * self.units_per_pixel.0;
+			pos.0 += (ch.h_metrics.advance_width - ch.h_metrics.left_side_bearing) / font.font_size * hor_size;
 		}
 		Ok(())
 	}
@@ -174,6 +176,7 @@ impl FontText {
 
 		let params = DrawParameters {
 			blend: glium::draw_parameters::Blend::alpha_blending(),
+			clip_planes_bitmask: 1,
 			..Default::default()
 		};
 
@@ -182,7 +185,10 @@ impl FontText {
 
 			if let Some(obj_def) = obj_def {
 				let uniforms = uniform! {
-					tex: ch.texture.as_ref().unwrap().sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest),
+					left_clip: self.left_clip,
+					tex: ch.texture.as_ref().unwrap().sampled()
+						.magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear)
+						.minify_filter(glium::uniforms::MinifySamplerFilter::Linear),
 					text_color: color
 				};
 

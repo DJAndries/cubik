@@ -28,7 +28,7 @@ use crate::skybox::Skybox;
 use crate::animation::ObjAnimation;
 use crate::player::Player;
 use crate::fonts::{LoadedFont, FontText, TextAlign};
-use crate::ui::MainMenu;
+use crate::ui::{MainMenu, MainMenuAction};
 use std::collections::HashMap;
 
 fn main() {
@@ -39,7 +39,7 @@ fn main() {
 
 	let main_program = shaders::main_program(&display);
 	let skybox_program = shaders::skybox_program(&display);
-	let font_program = shaders::font_program(&display);
+	let ui_program = shaders::ui_program(&display);
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
@@ -132,7 +132,7 @@ fn main() {
 					let winsize = window.inner_size();
 					let middle = ((winsize.width / 2) as f64, (winsize.height / 2) as f64);
 					window.set_cursor_position(glium::glutin::dpi::PhysicalPosition::new(middle.0, middle.1));
-					window.set_cursor_visible(false);
+					// window.set_cursor_visible(false);
 				},
 				glutin::event::StartCause::Poll => (),
 				_ => return
@@ -164,7 +164,16 @@ fn main() {
 
 		target.clear_color_and_depth((0., 0., 0., 1.0), 1.0); 
 
-		main_menu.draw(&mut target, &display, &font_program);
+		if let Some(result) = main_menu.draw(&mut target, &display, &ui_program).unwrap() {
+			match result {
+				MainMenuAction::Quit => {
+					target.finish().unwrap();
+					*control_flow = glutin::event_loop::ControlFlow::Exit;
+					return;
+				},
+				MainMenuAction::Start => ()
+			};
+		}
 
 		// target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
