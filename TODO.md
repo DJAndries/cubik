@@ -1,6 +1,3 @@
-- add ui draw to draw.rs
-- maybe use size in y-scale of font model matrix? instead of in vbo
-
 # big features
 - materials
 - sounds

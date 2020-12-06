@@ -3,7 +3,7 @@ use crate::fonts::{LoadedFont, FontText, TextAlign, FontError};
 use crate::input::InputListener;
 use glium::glutin::event::{VirtualKeyCode, ElementState, MouseButton};
 use glium::{DrawParameters, Display, Surface, Frame, texture::SrgbTexture2d};
-use crate::draw::{Vertex, ObjDef, load_data_to_gpu};
+use crate::draw::{Vertex, ObjDef, load_data_to_gpu, UIDrawInfo, ui_draw};
 use crate::textures::{load_srgb_texture, TextureLoadError};
 use std::collections::HashSet;
 use derive_more::{From, Error};
@@ -28,9 +28,9 @@ pub struct TextButton {
 }
 
 impl TextButton {
-	pub fn new(text: String, size: f32, pos: (f32, f32), half_size: (f32, f32), normal_color: [f32; 4], hover_color: [f32; 4], align: TextAlign) -> Self {
+	pub fn new(text: String, size: f32, pos: (f32, f32), half_size: (f32, f32), normal_color: [f32; 4], hover_color: [f32; 4]) -> Self {
 		Self {
-			text: FontText::new(text, size, pos, align),
+			text: FontText::new(text, size, pos, TextAlign::Center),
 			pos: pos,
 			half_size: half_size,
 			normal_color: normal_color,
@@ -40,7 +40,7 @@ impl TextButton {
 	}
 
 	pub fn draw(&mut self, target: &mut Frame, display: &Display, ui_program: &glium::Program, font: &LoadedFont) -> Result<(), UIError> {
-		Ok(self.text.draw(target, display, ui_program, font, if self.is_hovering { self.hover_color } else { self.normal_color })?)
+		Ok(self.text.draw(target, display, ui_program, font)?)
 	}
 }
 
@@ -58,6 +58,7 @@ impl InputListener for TextButton {
 			&& mouse_pos.0 < (self.pos.0 + self.half_size.0)
 			&& mouse_pos.1 >= (self.pos.1 - self.half_size.1)
 			&& mouse_pos.1 < (self.pos.1 + self.half_size.1);
+		self.text.ui_draw_info.color = if self.is_hovering { self.hover_color } else { self.normal_color };
 		false
 	}
 
@@ -72,22 +73,25 @@ impl InputListener for TextButton {
 pub struct TextInput {
 	pos: (f32, f32),
 	size: (f32, f32),
+	color: [f32; 4],
 	pub text: String,
 	display_text: FontText,
 	is_hovering: bool,
-	color: [f32; 4],
 	pub active: bool,
 	text_x_offset: f32
 }
 
 impl TextInput {
 	pub fn new(pos: (f32, f32), size: (f32, f32), color: [f32; 4]) -> Self {
+		let mut display_text = FontText::new("".to_string(), size.1, pos, TextAlign::Left);
+		display_text.ui_draw_info.color = color;
+		display_text.ui_draw_info.left_clip = pos.0;
 		Self {
 			pos: pos,
 			size: size,
-			text: String::new(),
 			color: color,
-			display_text: FontText::new("".to_string(), size.1, pos, TextAlign::Left),
+			text: String::new(),
+			display_text: display_text,
 			is_hovering: false,
 			active: false,
 			text_x_offset: 0.
@@ -97,16 +101,17 @@ impl TextInput {
 	fn gen_display_text(&mut self) {
 		self.display_text = FontText::new(self.text.clone(),
 			self.size.1, (self.pos.0 - self.text_x_offset, self.pos.1 + 0.03), TextAlign::Left);
-		self.display_text.left_clip = self.pos.0;
+		self.display_text.ui_draw_info.color = self.color;
+		self.display_text.ui_draw_info.left_clip = self.pos.0;
 	}
 
 	pub fn draw(&mut self, target: &mut Frame, display: &Display, ui_program: &glium::Program, font: &LoadedFont) -> Result<(), UIError> {
-		let text_width = self.display_text.measure_width(font)?;
+		let text_width = self.display_text.measure_width(font)? * self.size.1;
 		if text_width > (self.size.0 + self.text_x_offset) {
 			self.text_x_offset = text_width - self.size.0;
 			self.gen_display_text();
 		}
-		Ok(self.display_text.draw(target, display, ui_program, font, self.color)?)
+		Ok(self.display_text.draw(target, display, ui_program, font)?)
 	}
 }
 
@@ -153,53 +158,28 @@ impl InputListener for TextInput {
 pub struct ImageBackground {
 	texture: SrgbTexture2d,
 	obj_def: ObjDef,
-	screen_dim: (u32, u32),
-	model_matrix: Option<[[f32; 3]; 3]>
+	ui_draw_info: UIDrawInfo
 }
 
 impl ImageBackground {
 	pub fn new(display: &Display, image_filename: &str, pos: (f32, f32), size: (f32, f32)) -> Result<Self, UIError> {
 		let vertices = [
-			Vertex { position: [pos.0, pos.1, 0.], normal: [0., 0., -1.], texcoords: [0., 0.] },
-			Vertex { position: [pos.0 + size.0, pos.1, 0.], normal: [0., 0., -1.], texcoords: [1., 0.] },
-			Vertex { position: [pos.0 + size.0, pos.1 + size.1, 0.], normal: [0., 0., -1.], texcoords: [1., 1.] },
-			Vertex { position: [pos.0, pos.1 + size.1, 0.], normal: [0., 0., -1.], texcoords: [0., 1.] }
+			Vertex { position: [-0.5, -0.5, 0.], normal: [0., 0., -1.], texcoords: [0., 0.] },
+			Vertex { position: [0.5, -0.5, 0.], normal: [0., 0., -1.], texcoords: [1., 0.] },
+			Vertex { position: [0.5, 0.5, 0.], normal: [0., 0., -1.], texcoords: [1., 1.] },
+			Vertex { position: [-0.5, 0.5, 0.], normal: [0., 0., -1.], texcoords: [0., 1.] }
 		];
 		let indices = [0, 1, 2, 0, 2, 3];
 		Ok(Self {
 			texture: load_srgb_texture(display, Path::new(image_filename), true)?,
 			obj_def: load_data_to_gpu(display, &vertices, &indices),
-			screen_dim: (0, 0),
-			model_matrix: None
+			ui_draw_info: UIDrawInfo::new(pos, size)
 		})
 	}
 
-	fn gen_model_matrix(&mut self, target: &mut Frame) {
-		self.screen_dim = target.get_dimensions();
-		let x_scale = self.screen_dim.1 as f32 / self.screen_dim.0 as f32;
-		self.model_matrix = Some([
-			[x_scale, 0., 0.],
-			[0., 1., 0.],
-			[0., 0., 1.0f32]
-		]);
-	}
-
 	pub fn draw(&mut self, target: &mut Frame, program: &glium::Program) {
-		if self.screen_dim != target.get_dimensions() {
-			self.gen_model_matrix(target);
-		}
-		let uniforms = uniform! {
-			tex: self.texture.sampled()
-				.magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear)
-				.minify_filter(glium::uniforms::MinifySamplerFilter::Linear),
-			text_color: WHITE,
-			model: self.model_matrix.unwrap()
-		};
-		let params = DrawParameters {
-			blend: glium::draw_parameters::Blend::alpha_blending(),
-			..Default::default()
-		};
-		target.draw(&self.obj_def.vertices, &self.obj_def.indices, program, &uniforms, &params);
+		self.ui_draw_info.generate_matrix(target);
+		ui_draw(target, &self.obj_def, &self.ui_draw_info, program, &self.texture);
 	}
 }
 
@@ -224,11 +204,11 @@ impl MainMenu {
 			enabled: false,
 			buttons: vec![
 				(MainMenuAction::Start,
-				 	TextButton::new("Start".to_string(), 0.15, (0., -0.3), (0.2, 0.05), NORMAL_COLOR, HOVER_COLOR, TextAlign::Center)),
+				 	TextButton::new("Start".to_string(), 0.15, (0., -0.3), (0.2, 0.05), NORMAL_COLOR, HOVER_COLOR)),
 				(MainMenuAction::Quit,
-				 	TextButton::new("Quit".to_string(), 0.15, (0., -0.5), (0.2, 0.05), NORMAL_COLOR, HOVER_COLOR, TextAlign::Center))
+				 	TextButton::new("Quit".to_string(), 0.15, (0., -0.5), (0.2, 0.05), NORMAL_COLOR, HOVER_COLOR))
 			],
-			bg: ImageBackground::new(display, "./textures/mainmenu.jpg", (-1.78, -1.), (3.55, 2.))?,
+			bg: ImageBackground::new(display, "./textures/mainmenu.jpg", (0., 0.), (3.55, 2.))?,
 			btn_font: LoadedFont::load(display, "./fonts/SourceCodePro-Light.otf", 80.)?,
 			start_dialog: StartDialog::new(display)?,
 			result: None
@@ -294,8 +274,8 @@ struct StartDialog {
 impl StartDialog {
 	pub fn new(display: &Display) -> Result<Self, UIError> {
 		Ok(Self {
-			bg: ImageBackground::new(display, "./textures/dialog.png", (-0.5, -0.35), (1.0, 0.7))?,
-			ip_input: TextInput::new((-0.41, -0.078), (0.85, 0.12), WHITE),
+			bg: ImageBackground::new(display, "./textures/dialog.png", (0., -0.17), (1.0, 0.7))?,
+			ip_input: TextInput::new((-0.45, -0.15), (0.85, 0.12), WHITE),
 			enabled: false
 		})
 	}

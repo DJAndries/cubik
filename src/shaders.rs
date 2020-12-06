@@ -127,7 +127,7 @@ pub fn ui_program(display: &Display) -> glium::Program {
 	void main() {
 		v_texcoords = texcoords;
 		gl_Position = vec4(model * vec3(position.xy, 1.0), 1.0);
-		gl_ClipDistance[0] = gl_Position.x - (model * vec3(left_clip, 0.0, 0.0)).x;
+		gl_ClipDistance[0] = gl_Position.x - left_clip;
 	}
 	"#;
 
@@ -139,11 +139,11 @@ pub fn ui_program(display: &Display) -> glium::Program {
 	out vec4 color;
 
 	uniform sampler2D tex;
-	uniform vec4 text_color;
+	uniform vec4 ui_color;
 
 	void main() {
 		vec4 tex_val = texture(tex, v_texcoords);
-		color = vec4(text_color.rgb * tex_val.rgb, tex_val.a * text_color.a);
+		color = vec4(ui_color.rgb * tex_val.rgb, tex_val.a * ui_color.a);
 	}
 	"#;
 	glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap()
