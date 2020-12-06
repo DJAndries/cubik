@@ -122,11 +122,12 @@ pub fn ui_program(display: &Display) -> glium::Program {
 
 	out vec2 v_texcoords;
 	uniform float left_clip;
+	uniform mat3 model;
 
 	void main() {
 		v_texcoords = texcoords;
-		gl_Position = vec4(position, 1.0);
-		gl_ClipDistance[0] = position.x - left_clip;
+		gl_Position = vec4(model * vec3(position.xy, 1.0), 1.0);
+		gl_ClipDistance[0] = gl_Position.x - (model * vec3(left_clip, 0.0, 0.0)).x;
 	}
 	"#;
 

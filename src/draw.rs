@@ -135,3 +135,4 @@ pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDr
 	};
 	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, env_info.params).unwrap();
 }
+

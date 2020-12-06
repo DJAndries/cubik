@@ -8,6 +8,7 @@ use std::collections::hash_map::DefaultHasher;
 use rusttype::{Font, Scale, Point, Rect, HMetrics};
 use derive_more::{Error, From};
 use crate::draw::{Vertex, load_data_to_gpu, ObjDef};
+use crate::math::mult_matrix3;
 use glium::{DrawParameters, Display, Frame, Surface, texture::{Texture2d, RawImage2d, TextureCreationError}};
 
 pub enum TextAlign {
@@ -28,8 +29,9 @@ pub struct FontText {
 	last_font_hash: u64,
 	align: TextAlign,
 	text: String,
-	size: f32,
+	pub size: f32,
 	pos: (f32, f32),
+	model_matrix: Option<[[f32; 3]; 3]>,
 	pub left_clip: f32
 }
 
@@ -104,46 +106,44 @@ impl FontText {
 			last_font_hash: 0,
 			screen_dim: (0, 0),
 			chars: Vec::with_capacity(text_len),
-			left_clip: 0.
+			left_clip: -1.,
+			model_matrix: None
 		}
 	}
 	
-	pub fn measure_width(&mut self, target: &Frame, font: &LoadedFont) -> Result<(f32, f32), FontError> {
-		self.screen_dim = target.get_dimensions();
-		let hor_size = (self.screen_dim.1 as f32) / (self.screen_dim.0 as f32) * self.size;
+	pub fn measure_width(&mut self, font: &LoadedFont) -> Result<f32, FontError> {
 		let mut width = 0.0f32;
 		for c in self.text.chars() {
 			let ch = font.chars.get(&c).ok_or(FontError::CharNotAvailable)?;
 			
-			width += ch.h_metrics.advance_width / font.font_size * hor_size;
+			width += ch.h_metrics.advance_width / font.font_size * self.size;
 		}
 
-		Ok((width, hor_size))
+		Ok(width)
 	}
 
-	fn starting_position(&mut self, target: &Frame, font: &LoadedFont) -> Result<((f32, f32), f32), FontError> {
-		let (width, hor_size) = self.measure_width(target, font)?;
+	fn starting_position(&mut self, font: &LoadedFont) -> Result<f32, FontError> {
+		let width = self.measure_width(font)?;
 		let x_offset: f32 = match self.align {
 			TextAlign::Left => 0.,
 			TextAlign::Right => width,
 			TextAlign::Center => width / 2.
 		};
-		Ok(((self.pos.0 - x_offset, self.pos.1), hor_size))
+		Ok(-x_offset)
 	}
 
 	fn prepare_chars(&mut self, target: &Frame, display: &Display, font: &LoadedFont) -> Result<(), FontError> {
-		let (starting_pos, hor_size) = self.starting_position(target, font)?;
-		let mut pos = starting_pos;
+		let mut pos = (self.starting_position(font)?, 0.0);
 		for c in self.text.chars() {
 			let mut char_result: Option<ObjDef> = None;
 
 			let ch = font.chars.get(&c).ok_or(FontError::CharNotAvailable)?;
 
-			pos.0 += ch.h_metrics.left_side_bearing / font.font_size * hor_size;
+			pos.0 += ch.h_metrics.left_side_bearing / font.font_size * self.size;
 
 			if let Some(bbox) = ch.bbox {
 				let ch_size = (bbox.width() as f32, bbox.height() as f32);
-				let real_size = (ch_size.0 / font.font_size * hor_size, ch_size.1 / font.font_size * self.size);
+				let real_size = (ch_size.0 / font.font_size * self.size, ch_size.1 / font.font_size * self.size);
 
 				pos.1 -= (bbox.max.y as f32) / font.font_size * self.size;
 
@@ -162,13 +162,30 @@ impl FontText {
 			}
 			self.chars.push((c, char_result));
 
-			pos.0 += (ch.h_metrics.advance_width - ch.h_metrics.left_side_bearing) / font.font_size * hor_size;
+			pos.0 += (ch.h_metrics.advance_width - ch.h_metrics.left_side_bearing) / font.font_size * self.size;
 		}
 		Ok(())
 	}
 
+	fn gen_model_matrix(&mut self, target: &mut Frame) {
+		self.screen_dim = target.get_dimensions();
+		let x_scale = self.screen_dim.1 as f32 / self.screen_dim.0 as f32;
+		self.model_matrix = Some(mult_matrix3(&[
+			[1., 0., 0.],
+			[0., 1., 0.],
+			[self.pos.0, self.pos.1, 1.0f32]
+		], &[
+			[x_scale, 0., 0.],
+			[0., 1., 0.],
+			[0., 0., 1.]
+		]));
+	}
+
 	pub fn draw(&mut self, target: &mut Frame, display: &Display, program: &glium::Program, font: &LoadedFont, color: [f32; 4]) -> Result<(), FontError> {
-		if self.screen_dim != target.get_dimensions() || self.last_font_hash != font.hash {
+		if self.screen_dim != target.get_dimensions() {
+			self.gen_model_matrix(target);
+		}
+		if self.last_font_hash != font.hash {
 			self.chars.clear();
 			self.prepare_chars(target, display, font)?;
 			self.last_font_hash = font.hash;
@@ -180,6 +197,8 @@ impl FontText {
 			..Default::default()
 		};
 
+		let dim = target.get_dimensions();
+
 		for (c, obj_def) in &self.chars {
 			let ch = font.chars.get(&c).ok_or(FontError::CharNotAvailable)?;
 
@@ -189,7 +208,8 @@ impl FontText {
 					tex: ch.texture.as_ref().unwrap().sampled()
 						.magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear)
 						.minify_filter(glium::uniforms::MinifySamplerFilter::Linear),
-					text_color: color
+					text_color: color,
+					model: self.model_matrix.unwrap()
 				};
 
 				target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, &params);

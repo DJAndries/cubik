@@ -1,14 +1,21 @@
 
 pub fn mult_matrix(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4]) -> [[f32; 4]; 4] {
-	let mut result = [
-		[0., 0., 0., 0.],
-		[0., 0., 0., 0.],
-		[0., 0., 0., 0.],
-		[0., 0., 0., 0.0f32]
-	];
+	let mut result = [[0.0f32; 4]; 4];
 	for i in 0..4 {
 		for j in 0..4 {
 			for k in 0..4 {
+				result[i][j] += a[i][k] * b[k][j];
+			}
+		}
+	}
+	result
+}
+
+pub fn mult_matrix3(a: &[[f32; 3]; 3], b: &[[f32; 3]; 3]) -> [[f32; 3]; 3] {
+	let mut result = [[0.0f32; 3]; 3];
+	for i in 0..3 {
+		for j in 0..3 {
+			for k in 0..3 {
 				result[i][j] += a[i][k] * b[k][j];
 			}
 		}
