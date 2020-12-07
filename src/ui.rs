@@ -220,7 +220,7 @@ impl MainMenu {
 		for (_, button) in &mut self.buttons {
 			button.draw(target, display, ui_program, &self.btn_font)?;
 		}
-		if self.start_dialog.enabled { self.start_dialog.draw(target, display, ui_program, &self.btn_font); }
+		if self.start_dialog.enabled { self.result = self.start_dialog.draw(target, display, ui_program, &self.btn_font)?; }
 		
 		if let Some(result) = self.result {
 			self.result = None;
@@ -261,6 +261,7 @@ impl InputListener for MainMenu {
 	}
 
 	fn handle_char_ev(&mut self, ch: char) -> bool {
+		if !self.enabled { return false; }
 		self.start_dialog.handle_char_ev(ch)
 	}
 }
@@ -268,22 +269,31 @@ impl InputListener for MainMenu {
 struct StartDialog {
 	bg: ImageBackground,
 	ip_input: TextInput,
-	enabled: bool
+	start_btn: TextButton,
+	enabled: bool,
+	result: Option<MainMenuAction>
 }
 
 impl StartDialog {
 	pub fn new(display: &Display) -> Result<Self, UIError> {
 		Ok(Self {
 			bg: ImageBackground::new(display, "./textures/dialog.png", (0., -0.17), (1.0, 0.7))?,
+			start_btn: TextButton::new("Start".to_string(), 0.08, (0.2, -0.2), (0.2, 0.05), NORMAL_COLOR, HOVER_COLOR),
 			ip_input: TextInput::new((-0.45, -0.15), (0.85, 0.12), WHITE),
-			enabled: false
+			enabled: false,
+			result: None
 		})
 	}
 
-	pub fn draw(&mut self, target: &mut Frame, display: &Display, ui_program: &glium::Program, font: &LoadedFont) -> Result<(), UIError> {
+	pub fn draw(&mut self, target: &mut Frame, display: &Display, ui_program: &glium::Program, font: &LoadedFont) -> Result<Option<MainMenuAction>, UIError> {
 		self.bg.draw(target, ui_program);
 		self.ip_input.draw(target, display, ui_program, font)?;
-		Ok(())
+		self.start_btn.draw(target, display, ui_program, font)?;
+		if let Some(result) = self.result {
+			self.result = None;
+			return Ok(Some(result));
+		}
+		Ok(None)
 	}
 }
 
@@ -295,12 +305,18 @@ impl InputListener for StartDialog {
 
 	fn handle_mouse_pos_ev(&mut self, pos: (f32, f32), display: &Display) -> bool {
 		if !self.enabled { return false; }
-		self.ip_input.handle_mouse_pos_ev(pos, display)
+		if self.ip_input.handle_mouse_pos_ev(pos, display) { return true; }
+		self.start_btn.handle_mouse_pos_ev(pos, display)
 	}
 
 	fn handle_mouse_ev(&mut self, mouse_button: MouseButton, state: ElementState) -> bool {
 		if !self.enabled { return false; }
-		self.ip_input.handle_mouse_ev(mouse_button, state)
+		if self.ip_input.handle_mouse_ev(mouse_button, state) { return true; }
+		if self.start_btn.handle_mouse_ev(mouse_button, state) {
+			self.result = Some(MainMenuAction::Start);
+			return true;
+		}
+		false
 	}
 
 	fn handle_char_ev(&mut self, ch: char) -> bool {

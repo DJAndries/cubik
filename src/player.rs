@@ -11,7 +11,7 @@ use glium::glutin::dpi::PhysicalPosition;
 
 const PLAYER_CUBE_DIM: [f32; 3] = [0.15, 0.2, 0.15];
 const MOVE_RATE: f32 = 1.28;
-const MOUSE_SENSITIVITY: f32 = 0.05;
+const MOUSE_SENSITIVITY: f32 = 1.8;
 const GRAVITY: f32 = 1.8;
 const EYE_HEIGHT: f32 = 0.38;
 const JUMP_VELOCITY: f32 = 0.9;
@@ -70,7 +70,7 @@ impl Player {
 
 		if let Some(mouse_diff) = self.mouse_diff {
 			self.camera.pitch_yaw.1 -= mouse_diff.0 * MOUSE_SENSITIVITY;
-			self.camera.pitch_yaw.0 -= (mouse_diff.1 * MOUSE_SENSITIVITY).min(1.57).max(-1.57);
+			self.camera.pitch_yaw.0 += (mouse_diff.1 * MOUSE_SENSITIVITY).min(1.57).max(-1.57);
 			self.camera.pitch_yaw.0 = self.camera.pitch_yaw.0.min(1.57).max(-1.57);
 			
 			self.camera.update_direction();
@@ -148,7 +148,7 @@ impl InputListener for Player {
 		let winsize = window.inner_size();
 		let middle = ((winsize.width / 2) as f32, (winsize.height / 2) as f32);
 
-		self.mouse_diff = Some(((new_pos.0 - middle.0) as f32, (new_pos.1 - middle.1) as f32));
+		self.mouse_diff = Some(new_pos);
 		window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1));
 		return true;
 	}

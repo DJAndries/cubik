@@ -91,12 +91,12 @@ fn main() {
 	let mut lights_arr: [[f32; 3]; MAX_LIGHTS] = Default::default();
 	for i in 0..lights.len() { lights_arr[i] = lights[i]; }
 
-	let mut last_frame_time = std::time::Instant::now();
-
 	let mut displace = 0.0f32;
 
 	let mut main_menu = MainMenu::new(&display).unwrap();
-	main_menu.enabled = true;
+	main_menu.enabled = false;
+
+	let mut last_frame_time = std::time::Instant::now();
 
 	event_loop.run(move |ev, _, control_flow| {
 		// let next_frame_time = std::time::Instant::now() + 
@@ -132,7 +132,7 @@ fn main() {
 					let winsize = window.inner_size();
 					let middle = ((winsize.width / 2) as f64, (winsize.height / 2) as f64);
 					window.set_cursor_position(glium::glutin::dpi::PhysicalPosition::new(middle.0, middle.1));
-					// window.set_cursor_visible(false);
+					window.set_cursor_visible(false);
 				},
 				glutin::event::StartCause::Poll => (),
 				_ => return
@@ -162,33 +162,35 @@ fn main() {
 			params: &params
 		};
 
-		target.clear_color_and_depth((0., 0., 0., 1.0), 1.0); 
+		if (main_menu.enabled) {
+			target.clear_color_and_depth((0., 0., 0., 1.0), 1.0); 
 
-		if let Some(result) = main_menu.draw(&mut target, &display, &ui_program).unwrap() {
-			match result {
-				MainMenuAction::Quit => {
-					target.finish().unwrap();
-					*control_flow = glutin::event_loop::ControlFlow::Exit;
-					return;
-				},
-				MainMenuAction::Start => ()
-			};
+			if let Some(result) = main_menu.draw(&mut target, &display, &ui_program).unwrap() {
+				match result {
+					MainMenuAction::Quit => {
+						target.finish().unwrap();
+						*control_flow = glutin::event_loop::ControlFlow::Exit;
+						return;
+					},
+					MainMenuAction::Start => main_menu.enabled = false
+				};
+			}
+		} else {
+			target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
+
+			for (key, o) in &map_obj {
+				let text_displace = if key.starts_with("water") {
+					Some([displace.sin() * 0.005, displace.sin() * 0.005])
+				} else { None };
+				basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures, text_displace);
+			}
+
+			for o in wolf_anim.get_keyframe().values() {
+				basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures, None);
+			}
+
+			skybox.draw(&mut target, &env_info, &skybox_program);
 		}
-
-		// target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
-
-		// for (key, o) in &map_obj {
-		// 	let text_displace = if key.starts_with("water") {
-		// 		Some([displace.sin() * 0.005, displace.sin() * 0.005])
-		// 	} else { None };
-		// 	basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures, text_displace);
-		// }
-
-		// for o in wolf_anim.get_keyframe().values() {
-		// 	basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures, None);
-		// }
-
-		// skybox.draw(&mut target, &env_info, &skybox_program);
 
 		target.finish().unwrap();
 	});
