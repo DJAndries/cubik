@@ -13,6 +13,7 @@ mod animation;
 mod player;
 mod fonts;
 mod ui;
+mod audio;
 
 #[macro_use]
 extern crate glium;
@@ -29,6 +30,7 @@ use crate::animation::ObjAnimation;
 use crate::player::Player;
 use crate::fonts::{LoadedFont, FontText, TextAlign};
 use crate::ui::{MainMenu, MainMenuAction};
+use crate::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
 use std::collections::HashMap;
 
 fn main() {
@@ -71,9 +73,14 @@ fn main() {
 		..Default::default()
 	};
 
+	let sound_stream = get_sound_stream().unwrap();
+
 	let mut t = 0.0f32;
 	let mut player = Player::new([0.0, 1.5, 0.0]);
 	let mut textures: HashMap<String, Texture2d> = HashMap::new();
+
+	play_sound_from_file(&sound_stream, "./audio/ding.wav").unwrap();
+	player.walking_sound = Some(buffer_sound("./audio/running.wav").unwrap());
 	
 	let mut quadoctree = QuadOctreeNode::new_tree(BoundingBox {
 		start_pos: [-25., -25., -25.],
@@ -148,7 +155,7 @@ fn main() {
 		// t += 0.160 * time_delta;
 		// cube_info.rotation[1] = t;
 		// cube_info.rotation[0] = t;
-		player.update(time_delta, &quadoctree);
+		player.update(time_delta, &quadoctree, &sound_stream);
 		wolf_anim.update(time_delta);
 
 		let mut target = display.draw();

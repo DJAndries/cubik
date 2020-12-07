@@ -8,6 +8,8 @@ use crate::quadoctree::QuadOctreeNode;
 use glium::glutin::event::{VirtualKeyCode, ElementState, MouseButton};
 use glium::Display;
 use glium::glutin::dpi::PhysicalPosition;
+use crate::audio::{SoundData, SoundStream, create_sink, sound_decoder_from_data_looped};
+use rodio::Sink;
 
 const PLAYER_CUBE_DIM: [f32; 3] = [0.15, 0.2, 0.15];
 const MOVE_RATE: f32 = 1.28;
@@ -21,6 +23,9 @@ pub struct Player {
 	pub player_cube: CollisionObj,
 	pub velocity: [f32; 3],
 	pub noclip: bool,
+
+	pub walking_sound: Option<SoundData>,
+	walking_sound_sink: Option<Sink>,
 
 	move_forward: bool,
 	move_left: bool,
@@ -43,11 +48,13 @@ impl Player {
 			move_right: false,
 			move_back: false,
 			jump: false,
-			mouse_diff: None
+			mouse_diff: None,
+			walking_sound: None,
+			walking_sound_sink: None
 		}
 	}
 
-	fn input_update(&mut self, time_delta: f32) {
+	fn input_update(&mut self, time_delta: f32, sound_stream: &SoundStream) -> bool {
 		let move_len = MOVE_RATE * time_delta;
 
 		let move_dir = if !self.noclip {
@@ -76,6 +83,24 @@ impl Player {
 			self.camera.update_direction();
 			self.mouse_diff = None;
 		}
+
+		move_vec != [0., 0., 0.0f32]
+	}
+
+	fn update_sound(&mut self, is_walking: bool, sound_stream: &SoundStream) {
+		if let Some(sound) = self.walking_sound.as_ref() {
+			if let Some(sink) = self.walking_sound_sink.as_ref() {
+				if !is_walking {
+					sink.stop();
+					self.walking_sound_sink = None;
+				}
+			} else if is_walking {
+				let sink = create_sink(sound_stream).unwrap();
+				sink.append(sound_decoder_from_data_looped(sound).unwrap());
+				sink.play();
+				self.walking_sound_sink = Some(sink);
+			}
+		}
 	}
 
 	fn fix_velocity(&mut self, correction_vec: &[f32; 3]) {
@@ -92,8 +117,10 @@ impl Player {
 		self.velocity[1] = JUMP_VELOCITY;
 	}
 
-	fn collision_gravity_update(&mut self, time_delta: f32, quadoctree: &QuadOctreeNode) {
-		if self.noclip { return; }
+	fn collision_gravity_update(&mut self, time_delta: f32, quadoctree: &QuadOctreeNode) -> bool {
+		if self.noclip { return false; }
+
+		let mut is_colliding = false;
 
 		let collide_result = check_player_collision(&quadoctree, &self.camera.position, &self.player_cube);
 
@@ -103,21 +130,26 @@ impl Player {
 			self.camera.position = add_vector(&self.camera.position, &poly_collide, 1.);
 			self.fix_velocity(&poly_collide);
 			self.maybe_jump();
+			is_colliding = true;
 		}
 		if let Some(tri_intersect) = collide_result.triangle {
 			if self.camera.position[1] < tri_intersect[1] + EYE_HEIGHT * 1.05 {
 				self.camera.position[1] = tri_intersect[1] + EYE_HEIGHT;
 				self.fix_velocity(&[0.0, 1.0, 0.0]);
 				self.maybe_jump();
+				is_colliding = true;
 			}
 		}
 
 		self.camera.position = add_vector(&self.camera.position, &self.velocity, time_delta);
+
+		is_colliding
 	}
 
-	pub fn update(&mut self, time_delta: f32, quadoctree: &QuadOctreeNode) {
-		self.input_update(time_delta);
-		self.collision_gravity_update(time_delta, quadoctree);
+	pub fn update(&mut self, time_delta: f32, quadoctree: &QuadOctreeNode, sound_stream: &SoundStream) {
+		let is_moving = self.input_update(time_delta, sound_stream);
+		let is_colliding = self.collision_gravity_update(time_delta, quadoctree);
+		self.update_sound(is_moving && is_colliding, sound_stream);
 	}
 }
 
