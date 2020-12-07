@@ -1,5 +1,5 @@
 [package]
-name = "cubic-rs"
+name = "cubik"
 version = "0.1.0"
 authors = ["Darnell Andries <darnell@andries.ca>"]
 edition = "2018"

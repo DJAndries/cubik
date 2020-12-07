@@ -1,36 +1,17 @@
-mod shaders;
-mod camera;
-mod draw;
-mod cube;
-mod math;
-mod input;
-mod wavefront;
-mod quadoctree;
-mod collision;
-mod textures;
-mod skybox;
-mod animation;
-mod player;
-mod fonts;
-mod ui;
-mod audio;
-
-#[macro_use]
-extern crate glium;
-
 use glium::{glutin, Surface, texture::Texture2d};
-use crate::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
-use crate::camera::perspective_matrix;
-use crate::cube::load_cube;
-use crate::input::{InputListener, process_input_event};
-use crate::quadoctree::{QuadOctreeNode, BoundingBox};
-use crate::math::add_vector;
-use crate::skybox::Skybox;
-use crate::animation::ObjAnimation;
-use crate::player::Player;
-use crate::fonts::{LoadedFont, FontText, TextAlign};
-use crate::ui::{MainMenu, MainMenuAction};
-use crate::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
+use cubik::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
+use cubik::camera::perspective_matrix;
+use cubik::cube::load_cube;
+use cubik::input::{InputListener, process_input_event};
+use cubik::quadoctree::{QuadOctreeNode, BoundingBox};
+use cubik::math::add_vector;
+use cubik::skybox::Skybox;
+use cubik::animation::ObjAnimation;
+use cubik::player::Player;
+use cubik::fonts::{LoadedFont, FontText, TextAlign};
+use cubik::ui::{MainMenu, MainMenuAction};
+use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
+use cubik::shaders;
 use std::collections::HashMap;
 
 fn main() {
@@ -88,7 +69,7 @@ fn main() {
 	}, false);
 	let mut lights: Vec<[f32; 3]> = Vec::new();
 
-	let map_obj = crate::wavefront::load_obj("models/map2.obj", &display, &mut textures,
+	let map_obj = cubik::wavefront::load_obj("models/map2.obj", &display, &mut textures,
 		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
 	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &display, &mut textures, 0.041).unwrap();

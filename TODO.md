@@ -1,6 +1,5 @@
 # big features
 - materials
-- sounds
 - weapon
 - npc
 - net com
