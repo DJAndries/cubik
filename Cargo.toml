@@ -12,3 +12,5 @@ derive_more = "*"
 image = "*"
 rusttype = "*"
 rodio = "*"
+serde = { version = "*", features = ["derive"] }
+bincode = "*"
