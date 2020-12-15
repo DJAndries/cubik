@@ -5,19 +5,20 @@ use std::net::{SocketAddr, TcpListener, TcpStream};
 use derive_more::{From, Error, Display};
 use serde::{Serialize, de::DeserializeOwned};
 use crate::message::CommMessage;
+use crate::message;
 
 #[derive(From, Error, Debug, Display)]
 pub enum ServerError {
 	IOError(io::Error),
-	SerializeError(bincode::Error),
+	MessageError(message::MessageError),
 	PlayerNotFound
 }
 
 pub struct ServerConn<M: Serialize + DeserializeOwned> {
-	stream: TcpStream,
+	pub stream: TcpStream,
 	buffer: Vec<u8>,
-	incoming_msgs: Vec<M>,
-	name: Option<String>
+	pub incoming_msgs: Vec<M>,
+	pub name: Option<String>
 }
 
 pub struct ServerContainer<M: Serialize + DeserializeOwned> {
@@ -70,6 +71,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 			player_id: pid,
 			joined: true
 		});
+		self.send_to(pid, &CommMessage::WhoYouAre { player_id: pid });
 	}
 
 	fn player_leave(&mut self, player_id: u8) {
@@ -97,36 +99,34 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 	fn receive_from(&mut self, player_id: u8) -> Result<(), ServerError> {
 		let conn = self.connections.get_mut(&player_id).ok_or(ServerError::PlayerNotFound)?;
 
-		if let Err(e) = conn.stream.read_to_end(&mut conn.buffer) {
-			self.player_leave(player_id);
-			return Err(ServerError::from(e));
-		}
-
-		if conn.buffer.len() < 5 {
-			return Ok(());
-		}
-
-		let mut le_bytes = [0u8; 4];
-		le_bytes.copy_from_slice(&conn.buffer[..4]);
-		let msg_size = u32::from_le_bytes(le_bytes) as usize;
-		if conn.buffer.len() - 4 < msg_size as usize {
-			return Ok(());
-		}
-
-		let decoded = bincode::deserialize::<CommMessage<M>>(&conn.buffer[4..(msg_size + 4)])?;
-
-		conn.buffer.drain(..(msg_size + 4));
-
-		self.process_msg(player_id, decoded);
+		match message::receive(&mut conn.stream, &mut conn.buffer) {
+			Err(e) => {
+				self.player_leave(player_id);
+				return Err(ServerError::from(e));
+			},
+			Ok(msg) => {
+				if let Some(msg) = msg {
+					self.process_msg(player_id, msg);
+				}
+			}
+		};
 
 		Ok(())
 	}
 
-	fn process_msg(&mut self, player_id: u8, msg: CommMessage<M>) {
-		let conn = self.connections.get_mut(&player_id).unwrap();
+	fn process_msg(&mut self, pid: u8, msg: CommMessage<M>) {
+		let conn = self.connections.get_mut(&pid).unwrap();
 
 		match msg {
-			CommMessage::PlayerNameStatement { name } => conn.name = Some(name),
+			CommMessage::PlayerNameStatement { player_id, name } => {
+				if player_id == pid {
+					conn.name = Some(name.clone());
+					self.broadcast(&CommMessage::PlayerNameStatement {
+						player_id: player_id,
+						name: name
+					});
+				}
+			},
 			CommMessage::App(msg) => conn.incoming_msgs.push(msg),
 			_ => ()
 		};
@@ -135,12 +135,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 	pub fn send_to(&mut self, player_id: u8, message: &CommMessage<M>) -> Result<(), ServerError> {
 		let conn = self.connections.get_mut(&player_id).ok_or(ServerError::PlayerNotFound)?;
 
-		let serialized: Vec<u8> = bincode::serialize(message)?;
-		let mut send_buf: Vec<u8> = Vec::with_capacity(serialized.len() + 4);
-		send_buf.extend_from_slice(&(serialized.len() as u32).to_le_bytes());
-		send_buf.extend_from_slice(&serialized);
-
-		if let Err(e) = conn.stream.write_all(&send_buf) {
+		if let Err(e) = message::send(&mut conn.stream, message) {
 			self.player_leave(player_id);
 			return Err(ServerError::from(e));
 		}
