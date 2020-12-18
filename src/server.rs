@@ -1,6 +1,6 @@
 use std::io;
 use std::io::{Read, Write};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use derive_more::{From, Error, Display};
 use serde::{Serialize, de::DeserializeOwned};
@@ -40,7 +40,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 		})
 	}
 
-	pub fn pids(&self) -> Vec<u8> {
+	pub fn pids(&self) -> HashSet<u8> {
 		self.connections.keys().cloned().collect()
 	}
 
@@ -67,16 +67,19 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 			name: None
 		});
 		self.next_player_id += 1;
-		self.broadcast(&CommMessage::PlayerChange {
+		self.send_to_internal(pid, &CommMessage::Welcome {
+			client_id: pid,
+			players: self.connections.iter().map(|(pid, conn)| (*pid, conn.name.clone())).collect()
+		});
+		self.broadcast_internal(&CommMessage::PlayerChange {
 			player_id: pid,
 			joined: true
 		});
-		self.send_to(pid, &CommMessage::WhoYouAre { player_id: pid });
 	}
 
 	fn player_leave(&mut self, player_id: u8) {
 		self.connections.remove(&player_id);
-		self.broadcast(&CommMessage::PlayerChange {
+		self.broadcast_internal(&CommMessage::PlayerChange {
 			player_id: player_id,
 			joined: false
 		});
@@ -90,10 +93,14 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 		Ok(result)
 	}
 
-	pub fn broadcast(&mut self, message: &CommMessage<M>) {
+	fn broadcast_internal(&mut self, message: &CommMessage<M>) {
 		for pid in self.pids() {
-			self.send_to(pid, message);
+			self.send_to_internal(pid, message);
 		}
+	}
+
+	pub fn broadcast(&mut self, message: M) {
+		self.broadcast_internal(&CommMessage::App(message));
 	}
 
 	fn receive_from(&mut self, player_id: u8) -> Result<(), ServerError> {
@@ -114,25 +121,23 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 		Ok(())
 	}
 
-	fn process_msg(&mut self, pid: u8, msg: CommMessage<M>) {
-		let conn = self.connections.get_mut(&pid).unwrap();
+	fn process_msg(&mut self, player_id: u8, msg: CommMessage<M>) {
+		let conn = self.connections.get_mut(&player_id).unwrap();
 
 		match msg {
-			CommMessage::PlayerNameStatement { player_id, name } => {
-				if player_id == pid {
-					conn.name = Some(name.clone());
-					self.broadcast(&CommMessage::PlayerNameStatement {
-						player_id: player_id,
-						name: name
-					});
-				}
+			CommMessage::PlayerNameStatement { name, .. } => {
+				conn.name = Some(name.clone());
+				self.broadcast_internal(&CommMessage::PlayerNameStatement {
+					player_id: player_id,
+					name: name
+				});
 			},
 			CommMessage::App(msg) => conn.incoming_msgs.push(msg),
 			_ => ()
 		};
 	}
 
-	pub fn send_to(&mut self, player_id: u8, message: &CommMessage<M>) -> Result<(), ServerError> {
+	fn send_to_internal(&mut self, player_id: u8, message: &CommMessage<M>) -> Result<(), ServerError> {
 		let conn = self.connections.get_mut(&player_id).ok_or(ServerError::PlayerNotFound)?;
 
 		if let Err(e) = message::send(&mut conn.stream, message) {
@@ -141,5 +146,9 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 		}
 
 		return Ok(())
+	}
+
+	fn send_to(&mut self, player_id: u8, message: M) -> Result<(), ServerError> {
+		self.send_to_internal(player_id, &CommMessage::App(message))
 	}
 }

@@ -1,3 +1,7 @@
+- cache the player name in the client example. it crashes when a client leaves
+- move assets into examples folder
+- netcom solution for Player
+
 # big features
 - materials
 - weapon
@@ -9,6 +13,7 @@
 # small features
 - add circle/sphere sat collision/collisionobj, add SAT poly-circle + cicle-circle
 - add translation matrix to collisionobj
+- add heartbeat/keepalive in netcom
 
 # fixes
 - fix starting direction of camera (mouse problem)

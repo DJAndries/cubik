@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::io::{Read, Write};
 use std::time::Duration;
 use crate::message::CommMessage;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::{SocketAddr, TcpStream, AddrParseError};
 use serde::{Serialize, de::DeserializeOwned};
 use crate::message;
@@ -16,9 +16,9 @@ pub enum ClientError {
 	AddrParseError(AddrParseError)
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct PeerMeta {
-	name: Option<String>
+	pub name: Option<String>
 }
 
 pub struct ClientContainer<M: Serialize + DeserializeOwned> {
@@ -34,6 +34,8 @@ impl<M: Serialize + DeserializeOwned> ClientContainer<M> {
 		let addr = SocketAddr::from_str(addr)?;
 		let stream = TcpStream::connect_timeout(&addr, Duration::new(5, 0))?;
 
+		stream.set_nonblocking(true)?;
+
 		Ok(Self {
 			stream: stream,
 			peers: HashMap::new(),
@@ -43,8 +45,20 @@ impl<M: Serialize + DeserializeOwned> ClientContainer<M> {
 		})
 	}
 
-	pub fn send(&mut self, message: &CommMessage<M>) -> Result<(), ClientError> {
-		Ok(message::send(&mut self.stream, message)?)
+	pub fn state_name(&mut self, name: String) -> Result<(), ClientError> {
+		message::send::<M>(&mut self.stream, &CommMessage::PlayerNameStatement {
+			player_id: 0,
+			name: name
+		})?;
+		Ok(())
+	}
+
+	pub fn pids(&self) -> HashSet<u8> {
+		self.peers.keys().cloned().collect()
+	}
+
+	pub fn send(&mut self, message: M) -> Result<(), ClientError> {
+		Ok(message::send(&mut self.stream, &CommMessage::App(message))?)
 	}
 
 	pub fn update(&mut self) -> Result<(), ClientError> {
@@ -57,7 +71,10 @@ impl<M: Serialize + DeserializeOwned> ClientContainer<M> {
 
 	fn process_msg(&mut self, msg: CommMessage<M>) {
 		match msg {
-			CommMessage::WhoYouAre { player_id } => self.player_id = Some(player_id),
+			CommMessage::Welcome { client_id, players } => {
+				self.player_id = Some(client_id);
+				self.peers = players.iter().map(|(pid, name)| (*pid, PeerMeta { name: name.clone() })).collect();
+			},
 			CommMessage::PlayerChange { player_id, joined } => {
 				if joined {
 					self.peers.insert(player_id, Default::default());
@@ -75,7 +92,7 @@ impl<M: Serialize + DeserializeOwned> ClientContainer<M> {
 		};
 	}
 
-	pub fn get_msgs(&mut self, player_id: u8) -> Vec<M> {
+	pub fn get_msgs(&mut self) -> Vec<M> {
 		let mut result: Vec<M> = Vec::new();
 		result.append(&mut self.incoming_msgs);
 		result

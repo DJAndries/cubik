@@ -14,8 +14,9 @@ pub enum CommMessage<M> {
 		player_id: u8,
 		name: String
 	},
-	WhoYouAre {
-		player_id: u8
+	Welcome {
+		players: Vec<(u8, Option<String>)>,
+		client_id: u8
 	},
 	App(M)
 }
@@ -38,7 +39,11 @@ pub fn send<M: Serialize + DeserializeOwned>(stream: &mut TcpStream, message: &C
 }
 
 pub fn receive<M: Serialize + DeserializeOwned>(stream: &mut TcpStream, buffer: &mut Vec<u8>) -> Result<Option<CommMessage<M>>, MessageError> {
-	stream.read_to_end(buffer)?;
+	if let Err(e) = stream.read_to_end(buffer) {
+		if e.kind() != io::ErrorKind::WouldBlock {
+			return Err(MessageError::from(e));
+		}
+	}
 
 	if buffer.len() < 5 {
 		return Ok(None);
