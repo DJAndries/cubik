@@ -1,6 +1,7 @@
 use glium::{Frame, Surface};
 use crate::math::{normalize_vector, cross_product};
 
+#[derive(Copy, Clone)]
 pub struct Camera {
 	pub position: [f32; 3],
 	pub direction: [f32; 3],

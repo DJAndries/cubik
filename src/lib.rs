@@ -17,6 +17,7 @@ pub mod audio;
 pub mod message;
 pub mod server;
 pub mod client;
+pub mod peer_player;
 
 #[macro_use]
 extern crate glium;

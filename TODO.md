@@ -1,6 +1,6 @@
-- cache the player name in the client example. it crashes when a client leaves
+- example for peer_player
 - move assets into examples folder
-- netcom solution for Player
+- glium event loop wrap
 
 # big features
 - materials
@@ -9,6 +9,7 @@
 - net com
 - ui
 - water
+- 3d sound
 
 # small features
 - add circle/sphere sat collision/collisionobj, add SAT poly-circle + cicle-circle

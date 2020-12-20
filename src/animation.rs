@@ -16,7 +16,6 @@ pub enum ObjAnimationError {
 pub struct ObjAnimation {
 	pub keyframes: Vec<BTreeMap<String, ObjDef>>,
 	pub keyframe_time: f32,
-	pub current_time: f32
 }
 
 impl ObjAnimation {
@@ -40,8 +39,7 @@ impl ObjAnimation {
 		keyframe_files.sort();
 		let mut result = ObjAnimation {
 			keyframes: Vec::with_capacity(keyframe_files.len()),
-			keyframe_time: keyframe_time,
-			current_time: 0.
+			keyframe_time: keyframe_time
 		};
 
 		for keyframe_file in keyframe_files {
@@ -52,11 +50,7 @@ impl ObjAnimation {
 		Ok(result)
 	}
 
-	pub fn update(&mut self, time_delta: f32) {
-		self.current_time += time_delta;
-	}
-
-	pub fn get_keyframe(&self) -> &BTreeMap<String, ObjDef> {
-		&self.keyframes[((self.current_time / self.keyframe_time) as usize) % self.keyframes.len()]
+	pub fn get_keyframe(&self, current_time: f32) -> &BTreeMap<String, ObjDef> {
+		&self.keyframes[((current_time / self.keyframe_time) as usize) % self.keyframes.len()]
 	}
 }

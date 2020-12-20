@@ -7,7 +7,7 @@ use cubik::quadoctree::{QuadOctreeNode, BoundingBox};
 use cubik::math::add_vector;
 use cubik::skybox::Skybox;
 use cubik::animation::ObjAnimation;
-use cubik::player::Player;
+use cubik::player::{Player, PlayerControlType};
 use cubik::fonts::{LoadedFont, FontText, TextAlign};
 use cubik::ui::{MainMenu, MainMenuAction};
 use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
@@ -57,7 +57,7 @@ fn main() {
 	let sound_stream = get_sound_stream().unwrap();
 
 	let mut t = 0.0f32;
-	let mut player = Player::new([0.0, 1.5, 0.0]);
+	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::Singleplayer);
 	let mut textures: HashMap<String, Texture2d> = HashMap::new();
 
 	play_sound_from_file(&sound_stream, "./audio/ding.wav").unwrap();
@@ -84,6 +84,7 @@ fn main() {
 	let mut main_menu = MainMenu::new(&display).unwrap();
 	main_menu.enabled = false;
 
+	let mut start_time = std::time::Instant::now();
 	let mut last_frame_time = std::time::Instant::now();
 
 	event_loop.run(move |ev, _, control_flow| {
@@ -136,8 +137,7 @@ fn main() {
 		// t += 0.160 * time_delta;
 		// cube_info.rotation[1] = t;
 		// cube_info.rotation[0] = t;
-		player.update(time_delta, &quadoctree, &sound_stream);
-		wolf_anim.update(time_delta);
+		player.update(time_delta, &quadoctree, &sound_stream, None);
 
 		let mut target = display.draw();
 
@@ -173,7 +173,7 @@ fn main() {
 				basic_render(&mut target, &env_info, &map_info, &o, &main_program, &textures, text_displace);
 			}
 
-			for o in wolf_anim.get_keyframe().values() {
+			for o in wolf_anim.get_keyframe(start_time.elapsed().as_secs_f32()).values() {
 				basic_render(&mut target, &env_info, &wolf_info, &o, &main_program, &textures, None);
 			}
 

@@ -35,6 +35,20 @@ pub struct ObjDrawInfo {
 	pub model_mat: Option<[[f32; 4]; 4]>
 }
 
+impl Default for ObjDrawInfo {
+	fn default() -> Self {
+		let mut result = Self {
+			position: [0., 0., 0.],
+			rotation: [0., 0., 0.],
+			scale: [0., 0., 0.],
+			color: [1., 1., 1.],
+			model_mat: None
+		};
+		result.generate_matrix();
+		result
+	}
+}
+
 pub struct UIDrawInfo {
 	pub position: (f32, f32),
 	pub scale: (f32, f32),
