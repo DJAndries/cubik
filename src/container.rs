@@ -1,4 +1,5 @@
-use glium::{glutin::{self, event_loop::EventLoop}, Display, Program, DrawParameters};
+use glium::{glutin::{self, event_loop::EventLoop}, Display, Program, DrawParameters, texture::Texture2d};
+use std::collections::HashMap;
 use crate::shaders;
 
 pub struct RenderContainer<'a> {
@@ -8,7 +9,9 @@ pub struct RenderContainer<'a> {
 	pub skybox_program: Program,
 	pub ui_program: Program,
 	
-	pub params: DrawParameters<'a>
+	pub params: DrawParameters<'a>,
+
+	pub textures: HashMap<String, Texture2d>
 }
 
 impl RenderContainer<'_> {
@@ -37,7 +40,8 @@ impl RenderContainer<'_> {
 				blend: glium::draw_parameters::Blend::alpha_blending(),
 				backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
 				..Default::default()
-			}
+			},
+			textures: HashMap::new()
 		}
 	}
 }

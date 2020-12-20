@@ -39,7 +39,7 @@ impl PeerPlayer {
 		}
 	}
 
-	pub fn draw(&mut self, target: &mut Frame, env_info: &EnvDrawInfo, program: &Program, textures: &HashMap<String, Texture2d>,
+	pub fn draw(&mut self, target: &mut Frame, env_info: &EnvDrawInfo, program: &Program,
 		moving_animation: &ObjAnimation, stand_model: &BTreeMap<String, ObjDef>, jump_model: &BTreeMap<String, ObjDef>) {
 		
 		let model = if self.is_moving {
@@ -53,7 +53,7 @@ impl PeerPlayer {
 		};
 			
 		for def in model.values() {
-			basic_render(target, env_info, &self.obj_draw_info, def, program, textures, None);
+			basic_render(target, env_info, &self.obj_draw_info, def, program, None);
 		}
 	}
 

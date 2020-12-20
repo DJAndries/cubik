@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 fn main() {
 	let event_loop = glutin::event_loop::EventLoop::new();
-	let ctr = RenderContainer::new(&event_loop, 1280, 720, true);
+	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, true);
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
@@ -40,7 +40,6 @@ fn main() {
 	let sound_stream = get_sound_stream().unwrap();
 
 	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::Singleplayer);
-	let mut textures: HashMap<String, Texture2d> = HashMap::new();
 
 	play_sound_from_file(&sound_stream, "./audio/ding.wav").unwrap();
 	player.walking_sound = Some(buffer_sound("./audio/running.wav").unwrap());
@@ -51,10 +50,10 @@ fn main() {
 	}, false);
 	let mut lights: Vec<[f32; 3]> = Vec::new();
 
-	let map_obj = cubik::wavefront::load_obj("models/map2.obj", Some(&ctr.display), &mut textures,
+	let map_obj = cubik::wavefront::load_obj("models/map2.obj", Some(&ctr.display), &mut ctr.textures,
 		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
-	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &ctr.display, &mut textures, 0.041).unwrap();
+	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&ctr.display, "skybox1", 512, 50.).unwrap();
 
@@ -122,7 +121,8 @@ fn main() {
 			view_mat: player.camera.view_matrix(),
 			lights: lights_arr,
 			light_count: lights.len(),
-			params: &ctr.params
+			params: &ctr.params,
+			textures: &ctr.textures
 		};
 
 		if (main_menu.enabled) {
@@ -145,11 +145,11 @@ fn main() {
 				let text_displace = if key.starts_with("water") {
 					Some([displace.sin() * 0.005, displace.sin() * 0.005])
 				} else { None };
-				basic_render(&mut target, &env_info, &map_info, &o, &ctr.main_program, &textures, text_displace);
+				basic_render(&mut target, &env_info, &map_info, &o, &ctr.main_program, text_displace);
 			}
 
 			for o in wolf_anim.get_keyframe(start_time.elapsed().as_secs_f32()).values() {
-				basic_render(&mut target, &env_info, &wolf_info, &o, &ctr.main_program, &textures, None);
+				basic_render(&mut target, &env_info, &wolf_info, &o, &ctr.main_program, None);
 			}
 
 			skybox.draw(&mut target, &env_info, &ctr.skybox_program);

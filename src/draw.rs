@@ -24,7 +24,8 @@ pub struct EnvDrawInfo<'a> {
 	pub perspective_mat: [[f32; 4]; 4],
 	pub params: &'a DrawParameters<'a>,
 	pub lights: [[f32; 3]; MAX_LIGHTS],
-	pub light_count: usize
+	pub light_count: usize,
+	pub textures: &'a HashMap<String, Texture2d>
 }
 
 pub struct ObjDrawInfo {
@@ -188,7 +189,7 @@ pub fn load_data_to_gpu(display: &Display, vertices: &[Vertex], indices: &[u32])
 }
 
 pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDrawInfo, obj_def: &ObjDef,
-	program: &Program, textures: &HashMap<String, Texture2d>, texcoord_displacement: Option<[f32; 2]>) {
+	program: &Program, texcoord_displacement: Option<[f32; 2]>) {
 	let uniforms = BasicDrawUniforms {
 		model: *obj_info.model_mat.as_ref().unwrap(),
 		view: env_info.view_mat,
@@ -197,7 +198,7 @@ pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDr
 		light_count: env_info.light_count as i32,
 		shape_color: obj_info.color,
 		texcoord_displacement: texcoord_displacement.unwrap_or([0., 0.]),
-		tex: textures.get(obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap()).unwrap()
+		tex: env_info.textures.get(obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap()).unwrap()
 	};
 	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, env_info.params).unwrap();
 }
