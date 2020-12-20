@@ -43,7 +43,7 @@ impl ObjAnimation {
 		};
 
 		for keyframe_file in keyframe_files {
-			let obj = load_obj(keyframe_file.as_str(), display, textures, &[1., 1., 1.], None, None)?;
+			let obj = load_obj(keyframe_file.as_str(), Some(display), textures, &[1., 1., 1.], None, None)?;
 			result.keyframes.push(obj);
 		}
 

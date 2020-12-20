@@ -160,7 +160,7 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 	Ok(())
 }
 
-fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
+fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
 	current_mtl: &Option<MtlInfo>, quadoctree: Option<&mut &mut QuadOctreeNode>, lights: Option<&mut &mut Vec<[f32; 3]>>,
 	o_name: &mut Option<String>, result: &mut BTreeMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
 	let mesh_type = if o_name.as_ref().unwrap().starts_with(COLLISION_PREFIX) {
@@ -171,10 +171,12 @@ fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<
 		MeshType::Terrain
 	} else { MeshType::Normal };
 
-	if MeshType::Normal == mesh_type || MeshType::Terrain == mesh_type {
-		let mut def = load_data_to_gpu(display, &vertices, &indices);
-		def.material = Some(current_mtl.as_ref().unwrap().clone());
-		result.insert(o_name.as_ref().unwrap().clone(), def);
+	if let Some(display) = display {
+		if MeshType::Normal == mesh_type || MeshType::Terrain == mesh_type {
+			let mut def = load_data_to_gpu(*display, &vertices, &indices);
+			def.material = Some(current_mtl.as_ref().unwrap().clone());
+			result.insert(o_name.as_ref().unwrap().clone(), def);
+		}
 	}
 
 	if MeshType::Terrain == mesh_type || MeshType::Collision == mesh_type {
@@ -195,7 +197,7 @@ fn process_obj(display: &Display, vertices: &mut Vec<Vertex>, indices: &mut Vec<
 	Ok(())
 }
 
-pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String, Texture2d>,
+pub fn load_obj(filename: &str, display: Option<&Display>, textures: &mut HashMap<String, Texture2d>,
 	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>,
 	mut lights: Option<&mut Vec<[f32; 3]>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
 	let f = File::open(filename)?;
@@ -221,14 +223,18 @@ pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String
 
 		match split.next().unwrap() {
 			"mtllib" => {
-				let parent_dir = Path::new(filename).parent().unwrap();
-				load_mtl(display, &mut split, &parent_dir, textures, &mut mtl_map)?;
+				if let Some(display) = display.as_ref() {
+					let parent_dir = Path::new(filename).parent().unwrap();
+					load_mtl(*display, &mut split, &parent_dir, textures, &mut mtl_map)?;
+				}
 			},
 			"usemtl" => {
-				let mtl_name = split.next()
-					.ok_or(WavefrontLoadError::FormatError { msg: "usemtl does not have a name" })?;
-				current_mtl = Some(mtl_map.get(mtl_name)
-					.ok_or(WavefrontLoadError::FormatError { msg: "Material does not exist" })?.clone());
+				if display.is_some() {
+					let mtl_name = split.next()
+						.ok_or(WavefrontLoadError::FormatError { msg: "usemtl does not have a name" })?;
+					current_mtl = Some(mtl_map.get(mtl_name)
+						.ok_or(WavefrontLoadError::FormatError { msg: "Material does not exist" })?.clone());
+				}
 			},
 			"v" => vertex_info.push(parse_vertex_or_normal(&mut split, scale)?),
 			"vn" => normal_info.push(parse_vertex_or_normal(&mut split, &[1., 1., 1.])?),
@@ -237,7 +243,7 @@ pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String
 				&mut indices)?,
 			"o" => {
 				if current_o_name.is_some() {
-					process_obj(display, &mut vertices, &mut indices, &current_mtl,
+					process_obj(display.as_ref(), &mut vertices, &mut indices, &current_mtl,
 						quadoctree.as_mut(), lights.as_mut(), &mut current_o_name, &mut result)?;
 				}
 				current_o_name = Some(split.next()
@@ -249,7 +255,7 @@ pub fn load_obj(filename: &str, display: &Display, textures: &mut HashMap<String
 	}
 
 	if current_o_name.is_some() {
-		process_obj(display, &mut vertices, &mut indices, &current_mtl,
+		process_obj(display.as_ref(), &mut vertices, &mut indices, &current_mtl,
 			quadoctree.as_mut(), lights.as_mut(), &mut current_o_name, &mut result)?;
 	}
 

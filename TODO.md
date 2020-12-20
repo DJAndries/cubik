@@ -1,6 +1,5 @@
 - example for peer_player
 - move assets into examples folder
-- glium event loop wrap
 
 # big features
 - materials
