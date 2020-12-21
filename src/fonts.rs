@@ -10,6 +10,7 @@ use derive_more::{Error, From};
 use crate::draw::{Vertex, load_data_to_gpu, ObjDef};
 use crate::draw::{UIDrawInfo, ui_draw};
 use glium::{DrawParameters, Display, Frame, Surface, texture::{SrgbTexture2d, RawImage2d, TextureCreationError}};
+use crate::assets::find_asset;
 
 const WHITE: [f32; 4] = [1., 1., 1., 1.];
 
@@ -49,8 +50,8 @@ pub enum FontError {
 }
 
 impl LoadedFont {
-	pub fn load(display: &Display, filename: &str, font_size: f32) -> Result<Self, FontError> {
-		let mut f = File::open(filename)?;
+	pub fn load(display: &Display, filename: &str, app_id: &str, font_size: f32) -> Result<Self, FontError> {
+		let mut f = File::open(find_asset(filename, app_id))?;
 		let mut f_contents = Vec::new();
 		f.read_to_end(&mut f_contents)?;
 

@@ -19,6 +19,7 @@ pub mod server;
 pub mod client;
 pub mod peer_player;
 pub mod container;
+pub mod assets;
 
 #[macro_use]
 pub extern crate glium;

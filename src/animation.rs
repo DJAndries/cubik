@@ -6,6 +6,7 @@ use std::collections::{HashMap, BTreeMap};
 use crate::draw::ObjDef;
 use crate::wavefront::{WavefrontLoadError, load_obj};
 use derive_more::{Error, From};
+use crate::assets::find_asset;
 
 #[derive(Debug, derive_more::Display, Error, From)]
 pub enum ObjAnimationError {
@@ -19,8 +20,8 @@ pub struct ObjAnimation {
 }
 
 impl ObjAnimation {
-	pub fn load_wavefront(name: &str, display: &Display, textures: &mut HashMap<String, Texture2d>, keyframe_time: f32) -> Result<ObjAnimation, ObjAnimationError> {
-		let animation_path = Path::new(name);
+	pub fn load_wavefront(name: &str, app_id: &str, display: &Display, textures: &mut HashMap<String, Texture2d>, keyframe_time: f32) -> Result<ObjAnimation, ObjAnimationError> {
+		let animation_path = find_asset(name, app_id);
 		let read_dir = fs::read_dir(&animation_path)?;
 
 		let mut keyframe_files: Vec<String> = Vec::new();
@@ -43,7 +44,7 @@ impl ObjAnimation {
 		};
 
 		for keyframe_file in keyframe_files {
-			let obj = load_obj(keyframe_file.as_str(), Some(display), textures, &[1., 1., 1.], None, None)?;
+			let obj = load_obj(keyframe_file.as_str(), app_id, Some(display), textures, &[1., 1., 1.], None, None)?;
 			result.keyframes.push(obj);
 		}
 

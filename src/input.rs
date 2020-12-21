@@ -1,5 +1,6 @@
 use glium::{Display, Frame, Surface};
 use glium::glutin::event::{KeyboardInput, VirtualKeyCode, ElementState, WindowEvent, MouseButton};
+use glium::glutin::dpi::PhysicalPosition;
 
 pub trait InputListener {
 	fn handle_char_ev(&mut self, ch: char) -> bool;
@@ -32,4 +33,13 @@ pub fn process_input_event(ev: WindowEvent, listeners: Vec<&mut InputListener>, 
 		}
 	}
 	false
+}
+
+pub fn center_cursor(display: &Display, cursor_visible: bool) {
+	let gl_window = display.gl_window();
+	let window = gl_window.window();
+	let winsize = window.inner_size();
+	let middle = ((winsize.width / 2) as f32, (winsize.height / 2) as f32);
+	window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1));
+	window.set_cursor_visible(cursor_visible);
 }

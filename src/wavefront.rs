@@ -9,6 +9,7 @@ use glium::{Display, texture::Texture2d};
 use derive_more::{Error, From};
 use crate::quadoctree::{QuadOctreeNode, QuadOctreeError, add_obj_to_quadoctree};
 use crate::textures::{load_texture, TextureLoadError};
+use crate::assets::find_asset;
 
 const COLLISION_PREFIX: &str = "collision_";
 const LIGHT_PREFIX: &str = "light_";
@@ -197,10 +198,11 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 	Ok(())
 }
 
-pub fn load_obj(filename: &str, display: Option<&Display>, textures: &mut HashMap<String, Texture2d>,
+pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, textures: &mut HashMap<String, Texture2d>,
 	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>,
 	mut lights: Option<&mut Vec<[f32; 3]>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
-	let f = File::open(filename)?;
+	let path = find_asset(filename, app_id);
+	let f = File::open(path.as_path())?;
 	let mut f = BufReader::new(f);
 
 	let mut line = String::new();
@@ -224,7 +226,7 @@ pub fn load_obj(filename: &str, display: Option<&Display>, textures: &mut HashMa
 		match split.next().unwrap() {
 			"mtllib" => {
 				if let Some(display) = display.as_ref() {
-					let parent_dir = Path::new(filename).parent().unwrap();
+					let parent_dir = path.parent().unwrap();
 					load_mtl(*display, &mut split, &parent_dir, textures, &mut mtl_map)?;
 				}
 			},

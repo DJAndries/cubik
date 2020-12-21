@@ -3,6 +3,7 @@ use std::io::{BufReader, Cursor, Read};
 use std::io;
 use rodio::{Source, Sink, decoder::{LoopedDecoder, Decoder, DecoderError}, OutputStream, OutputStreamHandle, StreamError, PlayError};
 use derive_more::{Display, From, Error};
+use crate::assets::find_asset;
 
 pub type SoundData = Vec<u8>;
 pub type SoundStream = (OutputStream, OutputStreamHandle);
@@ -15,8 +16,8 @@ pub enum AudioError {
 	RodioPlayError(PlayError),
 }
 
-pub fn buffer_sound(filename: &str) -> Result<SoundData, AudioError> {
-	let mut file = File::open(filename)?;
+pub fn buffer_sound(filename: &str, app_id: &str) -> Result<SoundData, AudioError> {
+	let mut file = File::open(find_asset(filename, app_id))?;
 	let mut data = Vec::new();
 	file.read_to_end(&mut data)?;
 	Ok(data)
@@ -31,8 +32,8 @@ pub fn sound_decoder_from_data(data: &SoundData) -> Result<Decoder<Cursor<Vec<u8
 	Ok(Decoder::new(cursor)?)
 }
 
-pub fn sound_decoder_from_file(filename: &str) -> Result<Decoder<BufReader<File>>, AudioError> {
-	let file = File::open(filename)?;
+pub fn sound_decoder_from_file(filename: &str, app_id: &str) -> Result<Decoder<BufReader<File>>, AudioError> {
+	let file = File::open(find_asset(filename, app_id))?;
 	let reader = BufReader::new(file);
 
 	Ok(Decoder::new(reader)?)
@@ -43,8 +44,8 @@ pub fn sound_decoder_from_data_looped(data: &SoundData) -> Result<LoopedDecoder<
 	Ok(Decoder::new_looped(cursor)?)
 }
 
-pub fn sound_decoder_from_file_looped(filename: &str) -> Result<LoopedDecoder<BufReader<File>>, AudioError> {
-	let file = File::open(filename)?;
+pub fn sound_decoder_from_file_looped(filename: &str, app_id: &str) -> Result<LoopedDecoder<BufReader<File>>, AudioError> {
+	let file = File::open(find_asset(filename, app_id))?;
 	let reader = BufReader::new(file);
 	Ok(Decoder::new_looped(reader)?)
 }
@@ -56,8 +57,8 @@ pub fn play_sound_from_data(stream: &SoundStream, data: &SoundData) -> Result<()
 	Ok(())
 }
 
-pub fn play_sound_from_file(stream: &SoundStream, filename: &str) -> Result<(), AudioError> {
-	let file = File::open(filename)?;
+pub fn play_sound_from_file(stream: &SoundStream, filename: &str, app_id: &str) -> Result<(), AudioError> {
+	let file = File::open(find_asset(filename, app_id))?;
 	let reader = BufReader::new(file);
 	
 	let decoder = Decoder::new(reader)?;

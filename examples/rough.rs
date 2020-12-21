@@ -1,15 +1,18 @@
+mod support;
+
 use cubik::glium::{self, glutin, Surface, texture::Texture2d};
 use cubik::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
 use cubik::camera::perspective_matrix;
 use cubik::cube::load_cube;
-use cubik::input::{InputListener, process_input_event};
+use cubik::input::{InputListener, process_input_event, center_cursor};
 use cubik::quadoctree::{QuadOctreeNode, BoundingBox};
 use cubik::math::add_vector;
 use cubik::skybox::Skybox;
 use cubik::animation::ObjAnimation;
 use cubik::player::{Player, PlayerControlType};
 use cubik::fonts::{LoadedFont, FontText, TextAlign};
-use cubik::ui::{MainMenu, MainMenuAction};
+use support::ui::{MainMenu, MainMenuAction};
+use support::constants::APP_ID;
 use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
 use cubik::shaders;
 use cubik::container::RenderContainer;
@@ -41,8 +44,8 @@ fn main() {
 
 	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::Singleplayer);
 
-	play_sound_from_file(&sound_stream, "./audio/ding.wav").unwrap();
-	player.walking_sound = Some(buffer_sound("./audio/running.wav").unwrap());
+	play_sound_from_file(&sound_stream, "./audio/ding.wav", APP_ID).unwrap();
+	player.walking_sound = Some(buffer_sound("./audio/running.wav", APP_ID).unwrap());
 	
 	let mut quadoctree = QuadOctreeNode::new_tree(BoundingBox {
 		start_pos: [-25., -25., -25.],
@@ -50,12 +53,12 @@ fn main() {
 	}, false);
 	let mut lights: Vec<[f32; 3]> = Vec::new();
 
-	let map_obj = cubik::wavefront::load_obj("models/map2.obj", Some(&ctr.display), &mut ctr.textures,
+	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, Some(&ctr.display), &mut ctr.textures,
 		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
-	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", &ctr.display, &mut ctr.textures, 0.041).unwrap();
+	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
-	let skybox = Skybox::new(&ctr.display, "skybox1", 512, 50.).unwrap();
+	let skybox = Skybox::new(&ctr.display, "skybox1", APP_ID, 512, 50.).unwrap();
 
 	let mut lights_arr: [[f32; 3]; MAX_LIGHTS] = Default::default();
 	for i in 0..lights.len() { lights_arr[i] = lights[i]; }
@@ -93,12 +96,7 @@ fn main() {
 			glutin::event::Event::NewEvents(cause) => match cause {
 				glutin::event::StartCause::ResumeTimeReached { .. } => (),
 				glutin::event::StartCause::Init => {
-					let gl_window = ctr.display.gl_window();
-					let window = gl_window.window();
-					let winsize = window.inner_size();
-					let middle = ((winsize.width / 2) as f64, (winsize.height / 2) as f64);
-					window.set_cursor_position(glium::glutin::dpi::PhysicalPosition::new(middle.0, middle.1));
-					window.set_cursor_visible(false);
+					center_cursor(&ctr.display, false);
 				},
 				glutin::event::StartCause::Poll => (),
 				_ => return
