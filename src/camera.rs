@@ -4,6 +4,7 @@ use crate::math::{normalize_vector, cross_product};
 #[derive(Copy, Clone)]
 pub struct Camera {
 	pub position: [f32; 3],
+	pub height: f32,
 	pub direction: [f32; 3],
 
 	pub pitch_yaw: (f32, f32)
@@ -12,9 +13,10 @@ pub struct Camera {
 pub const UP: [f32; 3] = [0.0, 1.0, 0.0];
 
 impl Camera {
-	pub fn new(position: [f32; 3]) -> Self {
+	pub fn new(position: [f32; 3], height: f32) -> Self {
 		Camera {
 			position: position,
+			height: height,
 			direction: [0.0, 0.0, 0.0],
 			pitch_yaw: (0.0, 0.0)
 		}
@@ -33,9 +35,11 @@ impl Camera {
 
 		let u = cross_product(&self.direction, &s);
 
-		let p = [-self.position[0] * s[0] - self.position[1] * s[1] - self.position[2] * s[2],
-				-self.position[0] * u[0] - self.position[1] * u[1] - self.position[2] * u[2],
-				-self.position[0] * self.direction[0] - self.position[1] * self.direction[1] - self.position[2] * self.direction[2]];
+		let position = [self.position[0], self.position[1] + self.height, self.position[2]];
+
+		let p = [-position[0] * s[0] - position[1] * s[1] - position[2] * s[2],
+				-position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
+				-position[0] * self.direction[0] - position[1] * self.direction[1] - position[2] * self.direction[2]];
 
 		[
 			[s[0], u[0], self.direction[0], 0.0],

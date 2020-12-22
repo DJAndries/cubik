@@ -1,5 +1,4 @@
 - example for peer_player
-- move assets into examples folder
 
 # big features
 - materials

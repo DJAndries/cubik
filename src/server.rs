@@ -104,19 +104,24 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 	}
 
 	fn receive_from(&mut self, player_id: u8) -> Result<(), ServerError> {
-		let conn = self.connections.get_mut(&player_id).ok_or(ServerError::PlayerNotFound)?;
 
-		match message::receive(&mut conn.stream, &mut conn.buffer) {
-			Err(e) => {
-				self.player_leave(player_id);
-				return Err(ServerError::from(e));
-			},
-			Ok(msg) => {
-				if let Some(msg) = msg {
-					self.process_msg(player_id, msg);
+		loop {
+			let conn = self.connections.get_mut(&player_id).ok_or(ServerError::PlayerNotFound)?;
+			let recv_result = message::receive(&mut conn.stream, &mut conn.buffer);
+			match recv_result {
+				Err(e) => {
+					self.player_leave(player_id);
+					return Err(ServerError::from(e));
+				},
+				Ok(msg) => {
+					if let Some(msg) = msg {
+						self.process_msg(player_id, msg);
+					} else {
+						break;
+					}
 				}
-			}
-		};
+			};
+		}
 
 		Ok(())
 	}

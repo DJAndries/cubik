@@ -62,7 +62,7 @@ impl<M: Serialize + DeserializeOwned> ClientContainer<M> {
 	}
 
 	pub fn update(&mut self) -> Result<(), ClientError> {
-		if let Some(msg) = message::receive(&mut self.stream, &mut self.buffer)? {
+		while let Some(msg) = message::receive(&mut self.stream, &mut self.buffer)? {
 			self.process_msg(msg);
 		}
 

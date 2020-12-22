@@ -27,9 +27,9 @@ impl PeerPlayer {
 
 	pub fn update(&mut self, incoming_msg: PlayerControlMessage) {
 		let was_walking = self.is_colliding && self.is_moving;
-		if let PlayerControlMessage::Server { position, pitch_yaw, is_colliding, is_moving } = incoming_msg {
+		if let PlayerControlMessage::Server { position, yaw, is_colliding, is_moving } = incoming_msg {
 			self.obj_draw_info.position = position;
-			self.obj_draw_info.rotation = [pitch_yaw.0, pitch_yaw.1, 0.];
+			self.obj_draw_info.rotation[1] = yaw;
 			self.is_colliding = is_colliding;
 			self.is_moving = is_moving;
 			if !was_walking && is_colliding && is_moving {

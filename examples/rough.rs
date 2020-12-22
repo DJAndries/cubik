@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 fn main() {
 	let event_loop = glutin::event_loop::EventLoop::new();
-	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, true);
+	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, false);
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
@@ -53,7 +53,7 @@ fn main() {
 	}, false);
 	let mut lights: Vec<[f32; 3]> = Vec::new();
 
-	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, Some(&ctr.display), &mut ctr.textures,
+	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
 		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
 	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
@@ -109,7 +109,7 @@ fn main() {
 
 		displace += time_delta;
 
-		player.update(time_delta, &quadoctree, &sound_stream, None);
+		player.update(time_delta, Some(&quadoctree), Some(&sound_stream), None);
 
 		let mut target = ctr.display.draw();
 

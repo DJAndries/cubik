@@ -41,7 +41,7 @@ impl Default for ObjDrawInfo {
 		let mut result = Self {
 			position: [0., 0., 0.],
 			rotation: [0., 0., 0.],
-			scale: [0., 0., 0.],
+			scale: [1., 1., 1.],
 			color: [1., 1., 1.],
 			model_mat: None
 		};

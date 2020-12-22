@@ -198,7 +198,7 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 	Ok(())
 }
 
-pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, textures: &mut HashMap<String, Texture2d>,
+pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, mut textures: Option<&mut HashMap<String, Texture2d>>,
 	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>,
 	mut lights: Option<&mut Vec<[f32; 3]>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
 	let path = find_asset(filename, app_id);
@@ -227,7 +227,7 @@ pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, texture
 			"mtllib" => {
 				if let Some(display) = display.as_ref() {
 					let parent_dir = path.parent().unwrap();
-					load_mtl(*display, &mut split, &parent_dir, textures, &mut mtl_map)?;
+					load_mtl(*display, &mut split, &parent_dir, *textures.as_mut().unwrap(), &mut mtl_map)?;
 				}
 			},
 			"usemtl" => {

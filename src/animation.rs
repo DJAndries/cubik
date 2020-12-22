@@ -44,7 +44,7 @@ impl ObjAnimation {
 		};
 
 		for keyframe_file in keyframe_files {
-			let obj = load_obj(keyframe_file.as_str(), app_id, Some(display), textures, &[1., 1., 1.], None, None)?;
+			let obj = load_obj(keyframe_file.as_str(), app_id, Some(display), Some(textures), &[1., 1., 1.], None, None)?;
 			result.keyframes.push(obj);
 		}
 
@@ -52,6 +52,10 @@ impl ObjAnimation {
 	}
 
 	pub fn get_keyframe(&self, current_time: f32) -> &BTreeMap<String, ObjDef> {
-		&self.keyframes[((current_time / self.keyframe_time) as usize) % self.keyframes.len()]
+		self.get_keyframe_by_index((current_time / self.keyframe_time) as usize)
+	}
+
+	pub fn get_keyframe_by_index(&self, index: usize) -> &BTreeMap<String, ObjDef> {
+		&self.keyframes[index % self.keyframes.len()]
 	}
 }

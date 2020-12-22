@@ -96,13 +96,13 @@ pub fn check_player_collision(tree: &QuadOctreeNode, point: &[f32; 3], player_bo
 		polygons: Vec::with_capacity(MAX_POLY_COLLIDE)
 	};
 
-
 	traverse_quadoctree(tree, point, &mut |obj: &CollisionObj| -> bool {
 		if let CollisionObj::Polygon(p_vertices, p_center) = player_box {
 			match obj {
 				CollisionObj::Triangle(triangle) => {
 					if result.triangle.is_none() {
-						result.triangle = moller_trumbore(&triangle, point, &[0., -1., 0.]);
+						let point = [point[0], point[1] + 0.1, point[2]];
+						result.triangle = moller_trumbore(&triangle, &point, &[0., -1., 0.]);
 					}
 				},
 				CollisionObj::Polygon(o_vertices, o_center) => {
