@@ -1,5 +1,3 @@
-- example for peer_player
-
 # big features
 - materials
 - weapon

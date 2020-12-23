@@ -36,7 +36,8 @@ fn main() {
 		player_map.retain(|&k, _| current_pids.contains(&k));
 
 		for pid in current_pids {
-			let mut player = player_map.entry(pid).or_insert(Player::new([0., 1.5, 0.], PlayerControlType::MultiplayerServer));
+			let mut player = player_map.entry(pid)
+				.or_insert(Player::new([0., 1.5, 0.], PlayerControlType::MultiplayerServer, [0.0, 0.275, 0.0], [0.44, 0.275, 0.08]));
 			if let Ok(msgs) = server_container.get_msgs(pid) {
 				for msg in msgs {
 					if let AppMessage::PlayerChange { msg, .. } = msg {

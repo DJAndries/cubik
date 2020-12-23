@@ -42,7 +42,8 @@ fn main() {
 
 	let sound_stream = get_sound_stream().unwrap();
 
-	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::Singleplayer);
+	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::Singleplayer,
+		[0.0, 0.275, 0.0], [0.44, 0.275, 0.08]);
 
 	play_sound_from_file(&sound_stream, "./audio/ding.wav", APP_ID).unwrap();
 	player.walking_sound = Some(buffer_sound("./audio/running.wav", APP_ID).unwrap());

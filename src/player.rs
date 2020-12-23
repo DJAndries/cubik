@@ -53,6 +53,8 @@ pub struct Player {
 
 	pub camera: Camera,
 	pub player_cube: CollisionObj,
+	pub player_cube_offset: [f32; 3],
+	pub player_cube_size: [f32; 3],
 	pub velocity: [f32; 3],
 	pub noclip: bool,
 
@@ -66,11 +68,19 @@ pub struct Player {
 }
 
 impl Player {
-	pub fn new(position: [f32; 3], control_type: PlayerControlType) -> Self {
+	pub fn new(position: [f32; 3], control_type: PlayerControlType, player_cube_offset: [f32; 3], player_cube_size: [f32; 3]) -> Self {
+		let player_cube_pos = [
+			position[0] + player_cube_offset[0],
+			position[1] + player_cube_offset[1],
+			position[2] + player_cube_offset[2]
+		];
+		let player_cube = generate_cube_collideobj(&player_cube_pos, &player_cube_size);
 		Self {
 			control_type: control_type,
 			camera: Camera::new(position, EYE_HEIGHT),
-			player_cube: generate_cube_collideobj(&position, &PLAYER_CUBE_DIM),
+			player_cube_offset: player_cube_offset,
+			player_cube_size: player_cube_size,
+			player_cube: player_cube,
 			velocity: [0., 0., 0.],
 			noclip: false,
 			is_colliding: false,
@@ -100,7 +110,13 @@ impl Player {
 		if self.input_state.move_left { move_vec = add_vector(&move_vec, &direction_perp, 1.0); }
 		if self.input_state.move_right { move_vec = add_vector(&move_vec, &direction_perp, -1.0); }
 		self.camera.position = add_vector(&self.camera.position, &move_vec, move_len);
-		self.player_cube = generate_cube_collideobj(&self.camera.position, &PLAYER_CUBE_DIM);
+
+		let player_cube_pos = [
+			self.camera.position[0] + self.player_cube_offset[0],
+			self.camera.position[1] + self.player_cube_offset[1],
+			self.camera.position[2] + self.player_cube_offset[2]
+		];
+		self.player_cube = generate_cube_collideobj(&player_cube_pos, &self.player_cube_size);
 
 		self.is_moving = move_vec != [0., 0., 0.0f32];
 	}

@@ -62,7 +62,8 @@ fn main() {
 	let mut peer_map: HashMap<u8, PeerPlayer> = HashMap::new();
 
 	let mut client_container: ClientContainer<AppMessage> = ClientContainer::new(format!("127.0.0.1:{}", PORT).as_str()).unwrap();
-	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::MultiplayerClient);
+	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::MultiplayerClient,
+		[0.0, 0.275, 0.0], [0.44, 0.275, 0.08]);
 
 	let mut lights: Vec<[f32; 3]> = Vec::new();
 
