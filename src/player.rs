@@ -12,7 +12,6 @@ use serde::{Serialize, Deserialize};
 use crate::audio::{SoundData, SoundStream, create_sink, sound_decoder_from_data_looped};
 use rodio::Sink;
 
-const PLAYER_CUBE_DIM: [f32; 3] = [0.15, 0.2, 0.15];
 const MOVE_RATE: f32 = 1.28;
 const MOUSE_SENSITIVITY: f32 = 1.8;
 const GRAVITY: f32 = 1.8;
@@ -69,12 +68,7 @@ pub struct Player {
 
 impl Player {
 	pub fn new(position: [f32; 3], control_type: PlayerControlType, player_cube_offset: [f32; 3], player_cube_size: [f32; 3]) -> Self {
-		let player_cube_pos = [
-			position[0] + player_cube_offset[0],
-			position[1] + player_cube_offset[1],
-			position[2] + player_cube_offset[2]
-		];
-		let player_cube = generate_cube_collideobj(&player_cube_pos, &player_cube_size);
+		let player_cube = generate_cube_collideobj(&player_cube_offset, &position, &player_cube_size, 0.);
 		Self {
 			control_type: control_type,
 			camera: Camera::new(position, EYE_HEIGHT),
@@ -111,12 +105,8 @@ impl Player {
 		if self.input_state.move_right { move_vec = add_vector(&move_vec, &direction_perp, -1.0); }
 		self.camera.position = add_vector(&self.camera.position, &move_vec, move_len);
 
-		let player_cube_pos = [
-			self.camera.position[0] + self.player_cube_offset[0],
-			self.camera.position[1] + self.player_cube_offset[1],
-			self.camera.position[2] + self.player_cube_offset[2]
-		];
-		self.player_cube = generate_cube_collideobj(&player_cube_pos, &self.player_cube_size);
+		self.player_cube = generate_cube_collideobj(&self.player_cube_offset, &self.camera.position,
+			&self.player_cube_size, -self.camera.pitch_yaw.1);
 
 		self.is_moving = move_vec != [0., 0., 0.0f32];
 	}
@@ -142,7 +132,7 @@ impl Player {
 
 	fn fix_velocity(&mut self, correction_vec: &[f32; 3]) {
 		for i in 0..3 {
-			if (correction_vec[i] > 0.01 && self.velocity[i] < 0.) || (correction_vec[i] < -0.01 && self.velocity[i] > 0.) {
+			if (correction_vec[i] > 0.00001 && self.velocity[i] < 0.) || (correction_vec[i] < -0.00001 && self.velocity[i] > 0.) {
 				self.velocity[i] = 0.;
 			}
 		}
@@ -179,9 +169,6 @@ impl Player {
 				}
 			}
 
-			if self.velocity != [0., 0., 0.] {
-				self.is_moving = true;
-			}
 			self.camera.position = add_vector(&self.camera.position, &self.velocity, time_delta);
 		}
 	}

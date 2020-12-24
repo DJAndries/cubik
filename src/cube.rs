@@ -2,9 +2,14 @@ use glium::{Display, Frame, DrawParameters, VertexBuffer, IndexBuffer};
 use crate::draw::{Vertex, ObjDef, load_data_to_gpu};
 use crate::quadoctree::CollisionObj;
 
-pub fn generate_cube_vertices(pos: &[f32; 3], dim: &[f32; 3]) -> [Vertex; 24] {
+pub fn generate_cube_vertices(pre_pos: &[f32; 3], post_pos: &[f32; 3], dim: &[f32; 3], yaw: f32) -> [Vertex; 24] {
 	let gen_pos = |proto: [f32; 3]| {
-		[proto[0] * dim[0] + pos[0], proto[1] * dim[1] + pos[1], proto[2] * dim[2] + pos[2]]
+		let before_yaw = [proto[0] * dim[0] + pre_pos[0], proto[1] * dim[1] + pre_pos[1], proto[2] * dim[2] + pre_pos[2]];
+		let after_yaw = (
+			(before_yaw[0] * yaw.cos()) + (before_yaw[2] * yaw.sin()),
+			(-before_yaw[0] * yaw.sin()) + (before_yaw[2] * yaw.cos())
+		);
+		[after_yaw.0 + post_pos[0], before_yaw[1] + post_pos[1], after_yaw.1 + post_pos[2]]
 	};
 	[
 		// back face
@@ -72,9 +77,9 @@ pub fn load_cube(display: &Display, dim: &[f32; 3], cull_reverse: bool) -> ObjDe
 	} else {
 		INDICES.iter().for_each(|i| indices.extend(i));
 	};
-	load_data_to_gpu(display, &generate_cube_vertices(&[0., 0., 0.], dim), &indices)
+	load_data_to_gpu(display, &generate_cube_vertices(&[0., 0., 0.], &[0., 0., 0.], dim, 0.), &indices)
 }
 
-pub fn generate_cube_collideobj(pos: &[f32; 3], dim: &[f32; 3]) -> CollisionObj {
-	CollisionObj::Polygon(generate_cube_vertices(pos, dim).to_vec(), *pos)
+pub fn generate_cube_collideobj(pre_pos: &[f32; 3], post_pos: &[f32; 3], dim: &[f32; 3], yaw: f32) -> CollisionObj {
+	CollisionObj::Polygon(generate_cube_vertices(pre_pos, post_pos, dim, yaw).to_vec(), *post_pos)
 }
