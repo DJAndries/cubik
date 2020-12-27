@@ -1,4 +1,4 @@
-use cubik::glium::{self, Display, Surface, Frame};
+use cubik::glium::{self, Display, Frame};
 use cubik::fonts::LoadedFont;
 use cubik::ui::{ImageBackground, TextButton, UIError, TextInput};
 use cubik::input::InputListener;

@@ -1,6 +1,5 @@
 use std::io;
 use std::fs;
-use std::path::Path;
 use glium::{Display, texture::Texture2d};
 use std::collections::{HashMap, BTreeMap};
 use crate::draw::ObjDef;
@@ -22,7 +21,6 @@ pub struct ObjAnimation {
 impl ObjAnimation {
 	pub fn load_wavefront(name: &str, app_id: &str, display: &Display, textures: &mut HashMap<String, Texture2d>, keyframe_time: f32) -> Result<ObjAnimation, ObjAnimationError> {
 		let animation_path = find_asset(name, app_id);
-		let read_dir = fs::read_dir(&animation_path)?;
 
 		let mut keyframe_files: Vec<String> = Vec::new();
 

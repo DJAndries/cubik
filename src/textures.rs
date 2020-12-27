@@ -3,7 +3,6 @@ use std::fs::File;
 use std::path::Path;
 use derive_more::{Error, From};
 use std::io::BufReader;
-use image::DynamicImage;
 use glium::{Display, texture::{Texture2d, SrgbTexture2d, RawImage2d, TextureCreationError}};
 
 #[derive(Debug, derive_more::Display, Error, From)]

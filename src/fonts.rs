@@ -1,4 +1,3 @@
-use image::{DynamicImage, Rgba};
 use std::fs::File;
 use std::io;
 use std::io::Read;
@@ -129,7 +128,7 @@ impl FontText {
 		Ok(-x_offset)
 	}
 
-	fn prepare_chars(&mut self, target: &Frame, display: &Display, font: &LoadedFont) -> Result<(), FontError> {
+	fn prepare_chars(&mut self, display: &Display, font: &LoadedFont) -> Result<(), FontError> {
 		let mut pos = (self.starting_position(font)?, 0.0);
 		for c in self.text.chars() {
 			let mut char_result: Option<ObjDef> = None;
@@ -167,18 +166,10 @@ impl FontText {
 	pub fn draw(&mut self, target: &mut Frame, display: &Display, program: &glium::Program, font: &LoadedFont) -> Result<(), FontError> {
 		if self.last_font_hash != font.hash {
 			self.chars.clear();
-			self.prepare_chars(target, display, font)?;
+			self.prepare_chars(display, font)?;
 			self.last_font_hash = font.hash;
 		}
 		self.ui_draw_info.generate_matrix(target);
-
-		let params = DrawParameters {
-			blend: glium::draw_parameters::Blend::alpha_blending(),
-			clip_planes_bitmask: 1,
-			..Default::default()
-		};
-
-		let dim = target.get_dimensions();
 
 		for (c, obj_def) in &self.chars {
 			let ch = font.chars.get(&c).ok_or(FontError::CharNotAvailable)?;

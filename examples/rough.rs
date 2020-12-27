@@ -1,26 +1,26 @@
 mod support;
 
-use cubik::glium::{self, glutin, Surface, texture::Texture2d};
-use cubik::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
+use cubik::glium::{glutin, Surface};
+use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS};
 use cubik::camera::perspective_matrix;
-use cubik::cube::load_cube;
+
 use cubik::input::{InputListener, process_input_event, center_cursor};
 use cubik::quadoctree::{QuadOctreeNode, BoundingBox};
-use cubik::math::add_vector;
+
 use cubik::skybox::Skybox;
 use cubik::animation::ObjAnimation;
 use cubik::player::{Player, PlayerControlType};
-use cubik::fonts::{LoadedFont, FontText, TextAlign};
+
 use support::ui::{MainMenu, MainMenuAction};
 use support::constants::APP_ID;
 use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
-use cubik::shaders;
+
 use cubik::container::RenderContainer;
-use std::collections::HashMap;
+
 
 fn main() {
 	let event_loop = glutin::event_loop::EventLoop::new();
-	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, false);
+	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, "Example", false);
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
@@ -57,7 +57,7 @@ fn main() {
 	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
 		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
 
-	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
+	let wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&ctr.display, "skybox1", APP_ID, 512, 50.).unwrap();
 
@@ -69,11 +69,11 @@ fn main() {
 	let mut main_menu = MainMenu::new(&ctr.display).unwrap();
 	main_menu.enabled = false;
 
-	let mut start_time = std::time::Instant::now();
+	let start_time = std::time::Instant::now();
 	let mut last_frame_time = std::time::Instant::now();
 
 	event_loop.run(move |ev, _, control_flow| {
-		let listeners: Vec<&mut InputListener> = vec![&mut main_menu, &mut player];
+		let listeners: Vec<&mut dyn InputListener> = vec![&mut main_menu, &mut player];
 		*control_flow = glutin::event_loop::ControlFlow::Poll;
 		match ev {
 			glutin::event::Event::WindowEvent { event, .. } => match event {
@@ -124,7 +124,7 @@ fn main() {
 			textures: &ctr.textures
 		};
 
-		if (main_menu.enabled) {
+		if main_menu.enabled {
 			target.clear_color_and_depth((0., 0., 0., 1.0), 1.0); 
 
 			if let Some(result) = main_menu.draw(&mut target, &ctr.display, &ctr.ui_program).unwrap() {

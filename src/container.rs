@@ -15,9 +15,10 @@ pub struct RenderContainer<'a> {
 }
 
 impl RenderContainer<'_> {
-	pub fn new(event_loop: &EventLoop<()>, width: usize, height: usize, fullscreen: bool) -> Self {
+	pub fn new(event_loop: &EventLoop<()>, width: usize, height: usize, title: &str, fullscreen: bool) -> Self {
 		let wb = glutin::window::WindowBuilder::new()
-			.with_inner_size(glutin::dpi::PhysicalSize { width: 1280, height: 720 })
+			.with_title(title)
+			.with_inner_size(glutin::dpi::PhysicalSize { width: width as u32, height: height as u32 })
 			.with_fullscreen(if fullscreen { Some(glutin::window::Fullscreen::Borderless(None)) } else { None });
 		let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
 		let display = glium::Display::new(wb, cb, &event_loop).unwrap();

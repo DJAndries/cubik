@@ -46,7 +46,7 @@ fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut
 
 fn main() {
 	let event_loop = glutin::event_loop::EventLoop::new();
-	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, false);
+	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, "Example", false);
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],

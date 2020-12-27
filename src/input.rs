@@ -1,5 +1,5 @@
-use glium::{Display, Frame, Surface};
-use glium::glutin::event::{KeyboardInput, VirtualKeyCode, ElementState, WindowEvent, MouseButton};
+use glium::Display;
+use glium::glutin::event::{VirtualKeyCode, ElementState, WindowEvent, MouseButton};
 use glium::glutin::dpi::PhysicalPosition;
 
 pub trait InputListener {
@@ -9,7 +9,7 @@ pub trait InputListener {
 	fn handle_mouse_ev(&mut self, button: MouseButton, state: ElementState) -> bool;
 }
 
-pub fn process_input_event(ev: WindowEvent, listeners: Vec<&mut InputListener>, display: &Display) -> bool {
+pub fn process_input_event(ev: WindowEvent, listeners: Vec<&mut dyn InputListener>, display: &Display) -> bool {
 	for listener in listeners {
 		if match ev {
 			WindowEvent::ReceivedCharacter(ch) => {

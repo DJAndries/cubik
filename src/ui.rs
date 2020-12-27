@@ -1,8 +1,7 @@
-use std::path::Path;
 use crate::fonts::{LoadedFont, FontText, TextAlign, FontError};
 use crate::input::InputListener;
 use glium::glutin::event::{VirtualKeyCode, ElementState, MouseButton};
-use glium::{DrawParameters, Display, Surface, Frame, texture::SrgbTexture2d};
+use glium::{Display, Surface, Frame, texture::SrgbTexture2d};
 use crate::draw::{Vertex, ObjDef, load_data_to_gpu, UIDrawInfo, ui_draw};
 use crate::textures::{load_srgb_texture, TextureLoadError};
 use derive_more::{From, Error};
@@ -41,15 +40,15 @@ impl TextButton {
 }
 
 impl InputListener for TextButton {
-	fn handle_char_ev(&mut self, ch: char) -> bool {
+	fn handle_char_ev(&mut self, _ch: char) -> bool {
 		false
 	}
 
-	fn handle_key_ev(&mut self, key: Option<VirtualKeyCode>, pressed: bool) -> bool {
+	fn handle_key_ev(&mut self, _key: Option<VirtualKeyCode>, _pressed: bool) -> bool {
 		false
 	}
 
-	fn handle_mouse_pos_ev(&mut self, mouse_pos: (f32, f32), display: &Display) -> bool {
+	fn handle_mouse_pos_ev(&mut self, mouse_pos: (f32, f32), _display: &Display) -> bool {
 		self.is_hovering = mouse_pos.0 >= (self.pos.0 - self.half_size.0)
 			&& mouse_pos.0 < (self.pos.0 + self.half_size.0)
 			&& mouse_pos.1 >= (self.pos.1 - self.half_size.1)
@@ -134,7 +133,7 @@ impl InputListener for TextInput {
 		false
 	}
 
-	fn handle_mouse_pos_ev(&mut self, mouse_pos: (f32, f32), display: &Display) -> bool {
+	fn handle_mouse_pos_ev(&mut self, mouse_pos: (f32, f32), _display: &Display) -> bool {
 		self.is_hovering = mouse_pos.0 >= self.pos.0
 			&& mouse_pos.0 < (self.pos.0 + self.size.0)
 			&& mouse_pos.1 >= self.pos.1

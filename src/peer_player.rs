@@ -1,6 +1,6 @@
-use glium::{Frame, Program, Texture2d};
+use glium::{Frame, Program};
 use std::time::Instant;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 use crate::player::PlayerControlMessage;
 use crate::animation::ObjAnimation;
 use crate::draw::{basic_render, ObjDef, ObjDrawInfo, EnvDrawInfo};

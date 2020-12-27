@@ -1,4 +1,4 @@
-use glium::{Display, Frame, DrawParameters, VertexBuffer, IndexBuffer};
+use glium::Display;
 use crate::draw::{Vertex, ObjDef, load_data_to_gpu};
 use crate::quadoctree::CollisionObj;
 
