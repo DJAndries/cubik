@@ -2,10 +2,10 @@ mod support;
 
 use cubik::client::ClientContainer;
 use support::msg::AppMessage;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::collections::HashSet;
-use std::time::Instant;
-use std::thread::sleep_ms;
+use std::time::{Instant, Duration};
+use std::thread::sleep;
 
 const PORT: u16 = 27020;
 
@@ -71,6 +71,6 @@ fn main() {
 			}).unwrap();
 		}
 
-		sleep_ms(16);
+		sleep(Duration::from_millis(16));
 	}
 }

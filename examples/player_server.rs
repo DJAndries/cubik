@@ -4,8 +4,8 @@ use cubik::server::ServerContainer;
 use cubik::player::{Player, PlayerControlType};
 use cubik::quadoctree::{QuadOctreeNode, BoundingBox};
 use support::msg::AppMessage;
-use std::time::Instant;
-use std::thread::sleep_ms;
+use std::time::{Instant, Duration};
+use std::thread::sleep;
 use std::collections::HashMap;
 use crate::support::constants::APP_ID;
 
@@ -24,7 +24,7 @@ fn main() {
 		end_pos: [25., 25., 25.]
 	}, false);
 
-	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, None, None,
+	let _map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, None, None,
 		&[1., 1., 1.], Some(&mut quadoctree), None).unwrap();
 
 	let mut last_time = Instant::now();
@@ -36,7 +36,7 @@ fn main() {
 		player_map.retain(|&k, _| current_pids.contains(&k));
 
 		for pid in current_pids {
-			let mut player = player_map.entry(pid)
+			let player = player_map.entry(pid)
 				.or_insert(Player::new([0., 1.5, 0.], PlayerControlType::MultiplayerServer, [-0.28, 0.275, 0.0], [0.44, 0.275, 0.08]));
 			if let Ok(msgs) = server_container.get_msgs(pid) {
 				for msg in msgs {
@@ -66,6 +66,6 @@ fn main() {
 
 		last_time = Instant::now();
 
-		sleep_ms(17);
+		sleep(Duration::from_millis(17));
 	}
 }

@@ -217,5 +217,5 @@ pub fn ui_draw(target: &mut Frame, obj_def: &ObjDef, ui_draw_info: &UIDrawInfo, 
 		clip_planes_bitmask: 1,
 		..Default::default()
 	};
-	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, &params);
+	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, &params).unwrap();
 }

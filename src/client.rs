@@ -87,8 +87,7 @@ impl<M: Serialize + DeserializeOwned> ClientContainer<M> {
 					peer.name = Some(name);
 				}
 			},
-			CommMessage::App(msg) => self.incoming_msgs.push(msg),
-			_ => ()
+			CommMessage::App(msg) => self.incoming_msgs.push(msg)
 		};
 	}
 

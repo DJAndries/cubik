@@ -8,10 +8,8 @@ use rusttype::{Font, Scale, Point, Rect, HMetrics};
 use derive_more::{Error, From};
 use crate::draw::{Vertex, load_data_to_gpu, ObjDef};
 use crate::draw::{UIDrawInfo, ui_draw};
-use glium::{DrawParameters, Display, Frame, Surface, texture::{SrgbTexture2d, RawImage2d, TextureCreationError}};
+use glium::{Display, Frame, texture::{SrgbTexture2d, RawImage2d, TextureCreationError}};
 use crate::assets::find_asset;
-
-const WHITE: [f32; 4] = [1., 1., 1., 1.];
 
 pub enum TextAlign {
 	Left,

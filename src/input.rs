@@ -40,6 +40,6 @@ pub fn center_cursor(display: &Display, cursor_visible: bool) {
 	let window = gl_window.window();
 	let winsize = window.inner_size();
 	let middle = ((winsize.width / 2) as f32, (winsize.height / 2) as f32);
-	window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1));
+	window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1)).unwrap();
 	window.set_cursor_visible(cursor_visible);
 }

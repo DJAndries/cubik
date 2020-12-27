@@ -54,7 +54,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 		}
 
 		for pid in self.pids() {
-			self.receive_from(pid);
+			let _ = self.receive_from(pid);
 		}
 	}
 
@@ -67,7 +67,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 			name: None
 		});
 		self.next_player_id += 1;
-		self.send_to_internal(pid, &CommMessage::Welcome {
+		let _ = self.send_to_internal(pid, &CommMessage::Welcome {
 			client_id: pid,
 			players: self.connections.iter().map(|(pid, conn)| (*pid, conn.name.clone())).collect()
 		});
@@ -95,7 +95,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 
 	fn broadcast_internal(&mut self, message: &CommMessage<M>) {
 		for pid in self.pids() {
-			self.send_to_internal(pid, message);
+			let _ = self.send_to_internal(pid, message);
 		}
 	}
 
@@ -153,7 +153,7 @@ impl<M: Serialize + DeserializeOwned> ServerContainer<M> {
 		return Ok(())
 	}
 
-	fn send_to(&mut self, player_id: u8, message: M) -> Result<(), ServerError> {
+	pub fn send_to(&mut self, player_id: u8, message: M) -> Result<(), ServerError> {
 		self.send_to_internal(player_id, &CommMessage::App(message))
 	}
 }

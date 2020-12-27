@@ -247,7 +247,7 @@ impl InputListener for Player {
 		
 		self.camera.update_direction();
 
-		window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1));
+		window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1)).unwrap();
 		return true;
 	}
 

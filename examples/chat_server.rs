@@ -2,8 +2,8 @@ mod support;
 
 use cubik::server::ServerContainer;
 use support::msg::AppMessage;
-use std::time::Instant;
-use std::thread::sleep_ms;
+use std::time::{Instant, Duration};
+use std::thread::sleep;
 
 const PORT: u16 = 27020;
 
@@ -38,6 +38,6 @@ fn main() {
 			});
 		}
 
-		sleep_ms(16);
+		sleep(Duration::from_millis(16));
 	}
 }

@@ -1,4 +1,5 @@
 mod support;
+mod ui;
 
 use cubik::glium::{glutin, Surface};
 use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS};
@@ -11,7 +12,7 @@ use cubik::skybox::Skybox;
 use cubik::animation::ObjAnimation;
 use cubik::player::{Player, PlayerControlType};
 
-use support::ui::{MainMenu, MainMenuAction};
+use ui::{MainMenu, MainMenuAction};
 use support::constants::APP_ID;
 use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
 

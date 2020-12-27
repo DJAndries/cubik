@@ -1,19 +1,15 @@
 mod support;
 
-use cubik::glium::{self, glutin, Surface, texture::Texture2d};
-use cubik::draw::{ObjDef, ObjDrawInfo, EnvDrawInfo, basic_render, MtlInfo, MAX_LIGHTS};
+use cubik::glium::{glutin, Surface};
+use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS};
 use cubik::camera::perspective_matrix;
-use cubik::cube::load_cube;
 use cubik::input::{InputListener, process_input_event, center_cursor};
-use cubik::math::add_vector;
 use cubik::skybox::Skybox;
 use cubik::animation::ObjAnimation;
 use cubik::player::{Player, PlayerControlType};
 use cubik::peer_player::PeerPlayer;
-use cubik::fonts::{LoadedFont, FontText, TextAlign};
 use support::constants::APP_ID;
-use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
-use cubik::shaders;
+use cubik::audio::{buffer_sound, get_sound_stream, SoundStream};
 use cubik::container::RenderContainer;
 use std::collections::HashMap;
 use cubik::client::ClientContainer;
@@ -21,7 +17,7 @@ use support::msg::AppMessage;
 
 const PORT: u16 = 27020;
 
-fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut HashMap<u8, PeerPlayer>, player: &mut Player) {
+fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut HashMap<u8, PeerPlayer>, player: &mut Player, sound_stream: &SoundStream) {
 	let pids = client_container.pids();
 	peer_map.retain(|&k, _| pids.contains(&k));
 
@@ -32,10 +28,10 @@ fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut
 			if client_container.player_id.unwrap_or(0) == player_id {
 				client_container.send(AppMessage::PlayerChange {
 					player_id: 0,
-					msg: player.update(0., None, None, Some(msg)).unwrap()
+					msg: player.update(0., None, Some(sound_stream), Some(msg)).unwrap()
 				}).unwrap();
 			} else {
-				let mut peer_player = peer_map.entry(player_id)
+				let peer_player = peer_map.entry(player_id)
 					.or_insert(PeerPlayer::new());
 
 				peer_player.update(msg);
@@ -74,7 +70,7 @@ fn main() {
 
 	let wolf_standing = cubik::wavefront::load_obj("models/wolf_standing.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
 		&[1., 1., 1.], None, None).unwrap();
-	let mut wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
+	let wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&ctr.display, "skybox1", APP_ID, 512, 50.).unwrap();
 
@@ -83,13 +79,12 @@ fn main() {
 
 	let mut displace = 0.0f32;
 
-	let mut start_time = std::time::Instant::now();
 	let mut last_frame_time = std::time::Instant::now();
 
 	let mut input_enabled = true;
 
 	event_loop.run(move |ev, _, control_flow| {
-		let listeners: Vec<&mut InputListener> = vec![&mut player];
+		let listeners: Vec<&mut dyn InputListener> = vec![&mut player];
 		*control_flow = glutin::event_loop::ControlFlow::Poll;
 		match ev {
 			glutin::event::Event::WindowEvent { event, .. } => match event {
@@ -137,7 +132,7 @@ fn main() {
 			_ => return
 		}
 		
-		net_update(&mut client_container, &mut peer_map, &mut player);
+		net_update(&mut client_container, &mut peer_map, &mut player, &sound_stream);
 
 		let new_frame_time = std::time::Instant::now();
 		let time_delta = new_frame_time.duration_since(last_frame_time).as_secs_f32();

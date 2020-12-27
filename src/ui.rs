@@ -1,7 +1,7 @@
 use crate::fonts::{LoadedFont, FontText, TextAlign, FontError};
 use crate::input::InputListener;
 use glium::glutin::event::{VirtualKeyCode, ElementState, MouseButton};
-use glium::{Display, Surface, Frame, texture::SrgbTexture2d};
+use glium::{Display, Frame, texture::SrgbTexture2d};
 use crate::draw::{Vertex, ObjDef, load_data_to_gpu, UIDrawInfo, ui_draw};
 use crate::textures::{load_srgb_texture, TextureLoadError};
 use derive_more::{From, Error};

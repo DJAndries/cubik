@@ -53,7 +53,7 @@ pub fn sound_decoder_from_file_looped(filename: &str, app_id: &str) -> Result<Lo
 pub fn play_sound_from_data(stream: &SoundStream, data: &SoundData) -> Result<(), AudioError> {
 	let cursor = Cursor::new(data.clone());
 	let decoder = Decoder::new(cursor)?;
-	stream.1.play_raw(decoder.convert_samples());
+	stream.1.play_raw(decoder.convert_samples())?;
 	Ok(())
 }
 
@@ -62,7 +62,7 @@ pub fn play_sound_from_file(stream: &SoundStream, filename: &str, app_id: &str) 
 	let reader = BufReader::new(file);
 	
 	let decoder = Decoder::new(reader)?;
-	stream.1.play_raw(decoder.convert_samples());
+	stream.1.play_raw(decoder.convert_samples())?;
 	Ok(())
 }
 
