@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use glium::{Display, Frame, Surface, DrawParameters, Program,
 	VertexBuffer, IndexBuffer, texture::{Texture2d, SrgbTexture2d}, uniforms::{Uniforms, UniformValue}};
 use crate::math::{mult_matrix, mult_matrix3};
+use crate::textures;
 
 pub const MAX_LIGHTS: usize = 4;
 
@@ -14,9 +15,19 @@ pub struct Vertex {
 
 implement_vertex!(Vertex, position, normal, texcoords);
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct MtlInfo {
-	pub diffuse_texture: Option<String>
+	pub diffuse_texture: Option<String>,
+	pub color: [f32; 3]
+}
+
+impl Default for MtlInfo {
+	fn default() -> Self {
+		Self {
+			color: [1., 1., 1.],
+			diffuse_texture: None
+		}
+	}
 }
 
 pub struct EnvDrawInfo<'a> {
@@ -32,7 +43,6 @@ pub struct ObjDrawInfo {
 	pub position: [f32; 3],
 	pub rotation: [f32; 3],
 	pub scale: [f32; 3],
-	pub color: [f32; 3],
 	pub model_mat: Option<[[f32; 4]; 4]>
 }
 
@@ -42,7 +52,6 @@ impl Default for ObjDrawInfo {
 			position: [0., 0., 0.],
 			rotation: [0., 0., 0.],
 			scale: [1., 1., 1.],
-			color: [1., 1., 1.],
 			model_mat: None
 		};
 		result.generate_matrix();
@@ -76,6 +85,7 @@ struct BasicDrawUniforms<'a> {
 	perspective: [[f32; 4]; 4],
 	shape_color: [f32; 3],
 	texcoord_displacement: [f32; 2],
+	min_text_val: [f32; 4],
 	tex: &'a Texture2d
 }
 
@@ -91,6 +101,7 @@ impl Uniforms for BasicDrawUniforms<'_> {
 		func("shape_color", UniformValue::Vec3(self.shape_color));
 		func("texcoord_displacement", UniformValue::Vec2(self.texcoord_displacement));
 		func("tex", UniformValue::Texture2d(self.tex, None));
+		func("min_text_val", UniformValue::Vec4(self.min_text_val));
 	}
 }
 
@@ -196,9 +207,12 @@ pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDr
 		perspective: env_info.perspective_mat,
 		lights: env_info.lights,
 		light_count: env_info.light_count as i32,
-		shape_color: obj_info.color,
+		shape_color: obj_def.material.as_ref().unwrap().color,
 		texcoord_displacement: texcoord_displacement.unwrap_or([0., 0.]),
-		tex: env_info.textures.get(obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap()).unwrap()
+		min_text_val: if obj_def.material.as_ref().unwrap().diffuse_texture.is_none() { [1., 1., 1., 1.0f32] } else { [0., 0., 0., 0.0f32] },
+		tex: env_info.textures.get(
+			obj_def.material.as_ref().unwrap().diffuse_texture.as_ref().unwrap_or(&textures::WHITE.to_string())
+		).unwrap()
 	};
 	target.draw(&obj_def.vertices, &obj_def.indices, program, &uniforms, env_info.params).unwrap();
 }

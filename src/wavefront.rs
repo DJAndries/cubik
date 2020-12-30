@@ -151,6 +151,13 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 					}
 					mtl.diffuse_texture = Some(img_filename.clone());
 				},
+				"Kd" => {
+					for i in 0..3 {
+						mtl.color[i] = split.next()
+							.ok_or(WavefrontLoadError::FormatError { msg: "Kd is missing a component" })?
+							.trim().parse()?;
+					}
+				},
 				&_ => ()
 			}
 		}

@@ -1,4 +1,5 @@
 use glium::{glutin::{self, event_loop::EventLoop}, Display, Program, DrawParameters, texture::Texture2d};
+use crate::textures::create_texture_map;
 use std::collections::HashMap;
 use crate::shaders;
 
@@ -20,12 +21,14 @@ impl RenderContainer<'_> {
 			.with_title(title)
 			.with_inner_size(glutin::dpi::PhysicalSize { width: width as u32, height: height as u32 })
 			.with_fullscreen(if fullscreen { Some(glutin::window::Fullscreen::Borderless(None)) } else { None });
-		let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
+		let cb = glutin::ContextBuilder::new();
 		let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
 		let main_program = shaders::main_program(&display);
 		let skybox_program = shaders::skybox_program(&display);
 		let ui_program = shaders::ui_program(&display);
+
+		let textures = create_texture_map(&display).unwrap();
 
 		Self {
 			display: display,
@@ -42,7 +45,7 @@ impl RenderContainer<'_> {
 				backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
 				..Default::default()
 			},
-			textures: HashMap::new()
+			textures: textures
 		}
 	}
 }

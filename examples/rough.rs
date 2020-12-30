@@ -25,7 +25,6 @@ fn main() {
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
-		color: [1.0, 1.0, 1.0],
 		rotation: [0.0, 0.0, 0.0f32],
 		scale: [1.0, 1.0, 1.0],
 		model_mat: None 
@@ -34,7 +33,6 @@ fn main() {
 
 	let mut wolf_info = ObjDrawInfo {
 		position: [0.4, 0.05, 0.0f32],
-		color: [1.0, 1.0, 1.0],
 		rotation: [0.0, 0.0, 0.0f32],
 		scale: [1.0, 1.0, 1.0],
 		model_mat: None 

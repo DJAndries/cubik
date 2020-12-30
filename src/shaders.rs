@@ -52,19 +52,20 @@ pub fn main_program(display: &Display) -> glium::Program {
 	uniform sampler2D tex;
 	uniform vec2 texcoord_displacement;
 	uniform int light_count;
+	uniform vec4 min_text_val;
 
-	const float ambient_val = 0.1;
-	const float diffuse_val = 0.6;
-	const float specular_val = 0.1;
+	const float ambient_val = 0.005;
+	const float diffuse_val = 0.7;
+	const float specular_val = 0.0;
 
 	void main() {
-		vec4 text_val = texture(tex, v_texcoords + texcoord_displacement);
+		vec4 text_val = max(min_text_val, texture(tex, v_texcoords + texcoord_displacement));
 
-		color = vec4(0.0, 0.0, 0.0, text_val.a);
+		color = vec4(text_val.rgb * ambient_val, text_val.a);
 		for (int i = 0; i < light_count; i++) {
 			vec3 norm = normalize(v_normal);
 			vec3 light_dir = normalize(v_lights[i] - v_position);
-			float diffuse = max(dot(norm, light_dir), 0.0) * 0.7;
+			float diffuse = max(dot(norm, light_dir), 0.0) * diffuse_val;
 
 			vec3 view_dir = normalize(-v_position);
 			vec3 reflect_dir = reflect(-light_dir, norm);
