@@ -15,7 +15,6 @@ use rodio::Sink;
 const MOVE_RATE: f32 = 1.28;
 const MOUSE_SENSITIVITY: f32 = 1.8;
 const GRAVITY: f32 = 1.8;
-const EYE_HEIGHT: f32 = 0.38;
 const JUMP_VELOCITY: f32 = 0.9;
 
 pub enum PlayerControlType {	
@@ -69,9 +68,10 @@ pub struct Player {
 impl Player {
 	pub fn new(position: [f32; 3], control_type: PlayerControlType, player_cube_offset: [f32; 3], player_cube_size: [f32; 3]) -> Self {
 		let player_cube = generate_cube_collideobj(&player_cube_offset, &position, &player_cube_size, 0.);
+		let eye_height = player_cube_offset[1] + (player_cube_size[1] * 0.8);
 		Self {
 			control_type: control_type,
-			camera: Camera::new(position, EYE_HEIGHT),
+			camera: Camera::new(position, eye_height),
 			player_cube_offset: player_cube_offset,
 			player_cube_size: player_cube_size,
 			player_cube: player_cube,

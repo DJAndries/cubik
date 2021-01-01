@@ -2,7 +2,7 @@ mod support;
 mod ui;
 
 use cubik::glium::{glutin, Surface};
-use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS};
+use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS, Light};
 use cubik::camera::perspective_matrix;
 
 use cubik::input::{InputListener, process_input_event, center_cursor};
@@ -15,6 +15,7 @@ use cubik::player::{Player, PlayerControlType};
 use ui::{MainMenu, MainMenuAction};
 use support::constants::APP_ID;
 use cubik::audio::{buffer_sound, get_sound_stream, play_sound_from_file};
+use cubik::map::GameMap;
 
 use cubik::container::RenderContainer;
 
@@ -24,8 +25,7 @@ fn main() {
 	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, "Example", false);
 
 	let mut map_info = ObjDrawInfo {
-		position: [0.0, 0.0, 0.0f32],
-		rotation: [0.0, 0.0, 0.0f32],
+		position: [0.0, 0.0, 0.0f32], rotation: [0.0, 0.0, 0.0f32],
 		scale: [1.0, 1.0, 1.0],
 		model_mat: None 
 	};
@@ -47,21 +47,20 @@ fn main() {
 	play_sound_from_file(&sound_stream, "./audio/ding.wav", APP_ID).unwrap();
 	player.walking_sound = Some(buffer_sound("./audio/running.wav", APP_ID).unwrap());
 	
-	let mut quadoctree = QuadOctreeNode::new_tree(BoundingBox {
+	let quadoctree = QuadOctreeNode::new_tree(BoundingBox {
 		start_pos: [-25., -25., -25.],
 		end_pos: [25., 25., 25.]
 	}, false);
-	let mut lights: Vec<[f32; 3]> = Vec::new();
-
-	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
-		&[1., 1., 1.], Some(&mut quadoctree), Some(&mut lights)).unwrap();
+	let map = GameMap::load_map("models/map2", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
+		quadoctree).unwrap();
 
 	let wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&ctr.display, "skybox1", APP_ID, 512, 50.).unwrap();
 
-	let mut lights_arr: [[f32; 3]; MAX_LIGHTS] = Default::default();
-	for i in 0..lights.len() { lights_arr[i] = lights[i]; }
+	let mut lights_arr: [Light; MAX_LIGHTS] = Default::default();
+	let mut lights_iter = map.lights.values();
+	for i in 0..map.lights.len() { lights_arr[i] = *lights_iter.next().unwrap(); }
 
 	let mut displace = 0.0f32;
 
@@ -109,7 +108,7 @@ fn main() {
 
 		displace += time_delta;
 
-		player.update(time_delta, Some(&quadoctree), Some(&sound_stream), None);
+		player.update(time_delta, Some(&map.quadoctree), Some(&sound_stream), None);
 
 		let mut target = ctr.display.draw();
 
@@ -118,7 +117,7 @@ fn main() {
 			perspective_mat: perspective_mat,
 			view_mat: player.camera.view_matrix(),
 			lights: lights_arr,
-			light_count: lights.len(),
+			light_count: map.lights.len(),
 			params: &ctr.params,
 			textures: &ctr.textures
 		};
@@ -139,7 +138,7 @@ fn main() {
 		} else {
 			target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
-			for (key, o) in &map_obj {
+			for (key, o) in &map.objects {
 				let text_displace = if key.starts_with("water") {
 					Some([displace.sin() * 0.005, displace.sin() * 0.005])
 				} else { None };

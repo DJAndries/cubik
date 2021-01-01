@@ -14,3 +14,4 @@ rusttype = "*"
 rodio = "*"
 serde = { version = "*", features = ["derive"] }
 bincode = "*"
+toml = "*"

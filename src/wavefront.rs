@@ -4,7 +4,7 @@ use std::collections::{HashMap, BTreeMap};
 use std::io::{BufReader, BufRead};
 use std::path::Path;
 use std::fs::File;
-use crate::draw::{ObjDef, Vertex, load_data_to_gpu, MtlInfo};
+use crate::draw::{ObjDef, Vertex, load_data_to_gpu, MtlInfo, Light};
 use glium::{Display, texture::Texture2d};
 use derive_more::{Error, From};
 use crate::quadoctree::{QuadOctreeNode, QuadOctreeError, add_obj_to_quadoctree};
@@ -169,7 +169,7 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 }
 
 fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
-	current_mtl: &Option<MtlInfo>, quadoctree: Option<&mut &mut QuadOctreeNode>, lights: Option<&mut &mut Vec<[f32; 3]>>,
+	current_mtl: &Option<MtlInfo>, quadoctree: Option<&mut &mut QuadOctreeNode>, lights: Option<&mut &mut HashMap<String, Light>>,
 	o_name: &mut Option<String>, result: &mut BTreeMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
 	let mesh_type = if o_name.as_ref().unwrap().starts_with(COLLISION_PREFIX) {
 		MeshType::Collision
@@ -195,7 +195,7 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 
 	if MeshType::Light == mesh_type {
 		if let Some(lights) = lights {
-			lights.push(vertices[0].position);
+			lights.insert(o_name.as_ref().unwrap().clone(), Light { position: vertices[0].position, ..Default::default() });
 		}
 	}
 
@@ -207,7 +207,7 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 
 pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, mut textures: Option<&mut HashMap<String, Texture2d>>,
 	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>,
-	mut lights: Option<&mut Vec<[f32; 3]>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
+	mut lights: Option<&mut HashMap<String, Light>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
 	let path = find_asset(filename, app_id);
 	let f = File::open(path.as_path())?;
 	let mut f = BufReader::new(f);

@@ -553,6 +553,7 @@ dependencies = [
  "rodio",
  "rusttype",
  "serde",
+ "toml",
 ]
 
 [[package]]

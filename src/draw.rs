@@ -3,8 +3,9 @@ use glium::{Display, Frame, Surface, DrawParameters, Program,
 	VertexBuffer, IndexBuffer, texture::{Texture2d, SrgbTexture2d}, uniforms::{Uniforms, UniformValue}};
 use crate::math::{mult_matrix, mult_matrix3};
 use crate::textures;
+use serde::Deserialize;
 
-pub const MAX_LIGHTS: usize = 4;
+pub const MAX_LIGHTS: usize = 24;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vertex {
@@ -34,7 +35,7 @@ pub struct EnvDrawInfo<'a> {
 	pub view_mat: [[f32; 4]; 4],
 	pub perspective_mat: [[f32; 4]; 4],
 	pub params: &'a DrawParameters<'a>,
-	pub lights: [[f32; 3]; MAX_LIGHTS],
+	pub lights: [Light; MAX_LIGHTS],
 	pub light_count: usize,
 	pub textures: &'a HashMap<String, Texture2d>
 }
@@ -76,9 +77,27 @@ pub struct ObjDef {
 	pub material: Option<MtlInfo>,
 }
 
+#[derive(Copy, Clone, Deserialize)]
+pub struct Light {
+	pub position: [f32; 3],
+	pub att_linear: f32,
+	pub att_quad: f32,
+	pub att_constant: f32
+}
+
+impl Default for Light {
+	fn default() -> Self {
+		Self {
+			position: [0., 0., 0.],
+			att_linear: 0.,
+			att_constant: 0.,
+			att_quad: 1.
+		}
+	}
+}
 
 struct BasicDrawUniforms<'a> {
-	lights: [[f32; 3]; MAX_LIGHTS],
+	lights: [Light; MAX_LIGHTS],
 	light_count: i32,
 	model: [[f32; 4]; 4],
 	view: [[f32; 4]; 4],
@@ -92,7 +111,10 @@ struct BasicDrawUniforms<'a> {
 impl Uniforms for BasicDrawUniforms<'_> {
 	fn visit_values<'a, F: FnMut(&str, UniformValue<'a>)>(&'a self, mut func: F) {
 		for i in 0..MAX_LIGHTS {
-			func(&format!("lights[{}]", i).to_string(), UniformValue::Vec3(self.lights[i]));
+			func(&format!("lights[{}].position", i).to_string(), UniformValue::Vec3(self.lights[i].position));
+			func(&format!("lights[{}].att_constant", i).to_string(), UniformValue::Float(self.lights[i].att_constant));
+			func(&format!("lights[{}].att_linear", i).to_string(), UniformValue::Float(self.lights[i].att_linear));
+			func(&format!("lights[{}].att_quad", i).to_string(), UniformValue::Float(self.lights[i].att_quad));
 		}
 		func("light_count", UniformValue::SignedInt(self.light_count));
 		func("model", UniformValue::Mat4(self.model));

@@ -4,7 +4,14 @@ pub fn main_program(display: &Display) -> glium::Program {
 	let vertex_shader_src = r#"
 	#version 330 core
 
-	#define MAX_LIGHTS 4
+	#define MAX_LIGHTS 24
+
+	struct Light {
+		vec3 position;
+		float att_constant;
+		float att_linear;
+		float att_quad;
+	};
 
 	in vec3 position;
 	in vec3 normal;
@@ -12,14 +19,13 @@ pub fn main_program(display: &Display) -> glium::Program {
 
 	smooth out vec3 v_normal;
 	out vec3 v_position;
-	out vec3 v_light;
 	out vec2 v_texcoords;
-	out vec3 v_lights[MAX_LIGHTS];
+	out vec3 v_lights_positions[MAX_LIGHTS];
 
 	uniform mat4 model;
 	uniform mat4 view;
 	uniform mat4 perspective;
-	uniform vec3 lights[MAX_LIGHTS];
+	uniform Light lights[MAX_LIGHTS];
 	uniform int light_count;
 
 	void main() {
@@ -29,7 +35,7 @@ pub fn main_program(display: &Display) -> glium::Program {
 		v_position = vec3(modelview * vec4(position, 1.0));
 
 		for (int i = 0; i < light_count; i++) {
-			v_lights[i] = vec3(view * vec4(lights[i], 1.0));
+			v_lights_positions[i] = vec3(view * vec4(lights[i].position, 1.0));
 		}
 		v_texcoords = texcoords;
 	}
@@ -38,13 +44,19 @@ pub fn main_program(display: &Display) -> glium::Program {
 	let fragment_shader_src = r#"
 	#version 330 core
 
-	#define MAX_LIGHTS 4
+	#define MAX_LIGHTS 24
+
+	struct Light {
+		vec3 position;
+		float att_constant;
+		float att_linear;
+		float att_quad;
+	};
 
 	smooth in vec3 v_normal;
 	in vec3 v_position;
-	in vec3 v_light;
 	in vec2 v_texcoords;
-	in vec3 v_lights[MAX_LIGHTS];
+	in vec3 v_lights_positions[MAX_LIGHTS];
 
 	out vec4 color;
 	uniform vec3 shape_color;
@@ -52,6 +64,7 @@ pub fn main_program(display: &Display) -> glium::Program {
 	uniform sampler2D tex;
 	uniform vec2 texcoord_displacement;
 	uniform int light_count;
+	uniform Light lights[MAX_LIGHTS];
 	uniform vec4 min_text_val;
 
 	const float ambient_val = 0.005;
@@ -64,15 +77,16 @@ pub fn main_program(display: &Display) -> glium::Program {
 		color = vec4(text_val.rgb * ambient_val, text_val.a);
 		for (int i = 0; i < light_count; i++) {
 			vec3 norm = normalize(v_normal);
-			vec3 light_dir = normalize(v_lights[i] - v_position);
+			vec3 light_dir = normalize(v_lights_positions[i] - v_position);
 			float diffuse = max(dot(norm, light_dir), 0.0) * diffuse_val;
 
 			vec3 view_dir = normalize(-v_position);
 			vec3 reflect_dir = reflect(-light_dir, norm);
 			float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 256.0);
 
-			float distance = length(v_lights[i] - v_position);
-			float attenuation = 1.0 / (distance * distance);
+			float distance = length(v_lights_positions[i] - v_position);
+			float attenuation = 1.0 / (lights[i].att_constant + (lights[i].att_linear * distance) +
+				(lights[i].att_quad * distance * distance));
 
 			color += vec4((diffuse * shape_color * text_val.rgb) + (specular * specular_val), 0.0) * attenuation;
 		}
