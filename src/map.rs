@@ -17,7 +17,7 @@ pub enum GameMapError {
 }
 
 pub struct GameMap {
-	pub quadoctree: QuadOctreeNode,
+	pub quadoctree: Option<QuadOctreeNode>,
 	pub lights: HashMap<String, Light>,
 	pub objects: BTreeMap<String, ObjDef>
 }
@@ -45,11 +45,11 @@ impl GameMap {
 	}
 
 	pub fn load_map(path: &str, app_id: &str, display: Option<&Display>, textures: Option<&mut HashMap<String, Texture2d>>,
-		mut quadoctree: QuadOctreeNode) -> Result<GameMap, GameMapError> {
+		mut quadoctree: Option<QuadOctreeNode>) -> Result<GameMap, GameMapError> {
 		let mut lights: HashMap<String, Light> = HashMap::new();
 
 		let objects = load_obj(format!("{}{}", path, ".obj").as_str(), app_id, display, textures, &[1., 1., 1.],
-			Some(&mut quadoctree), Some(&mut lights))?;
+			quadoctree.as_mut(), Some(&mut lights))?;
 
 		let mut result = Self {
 			lights: lights,

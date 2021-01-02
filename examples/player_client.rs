@@ -1,7 +1,7 @@
 mod support;
 
 use cubik::glium::{glutin, Surface};
-use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS};
+use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS, Light};
 use cubik::camera::perspective_matrix;
 use cubik::input::{InputListener, process_input_event, center_cursor};
 use cubik::skybox::Skybox;
@@ -13,6 +13,7 @@ use cubik::audio::{buffer_sound, get_sound_stream, SoundStream};
 use cubik::container::RenderContainer;
 use std::collections::HashMap;
 use cubik::client::ClientContainer;
+use cubik::map::GameMap;
 use support::msg::AppMessage;
 
 const PORT: u16 = 27020;
@@ -46,7 +47,6 @@ fn main() {
 
 	let mut map_info = ObjDrawInfo {
 		position: [0.0, 0.0, 0.0f32],
-		color: [1.0, 1.0, 1.0],
 		rotation: [0.0, 0.0, 0.0f32],
 		scale: [1.0, 1.0, 1.0],
 		model_mat: None 
@@ -61,12 +61,10 @@ fn main() {
 	let mut player = Player::new([0.0, 1.5, 0.0], PlayerControlType::MultiplayerClient,
 		[0.0, 0.275, 0.0], [0.44, 0.275, 0.08]);
 
-	let mut lights: Vec<[f32; 3]> = Vec::new();
-
 	player.walking_sound = Some(buffer_sound("./audio/running.wav", APP_ID).unwrap());
 	
-	let map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
-		&[1., 1., 1.], None, Some(&mut lights)).unwrap();
+	let map = GameMap::load_map("models/map2", APP_ID,
+		Some(&ctr.display), Some(&mut ctr.textures), None).unwrap();
 
 	let wolf_standing = cubik::wavefront::load_obj("models/wolf_standing.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
 		&[1., 1., 1.], None, None).unwrap();
@@ -74,8 +72,9 @@ fn main() {
 
 	let skybox = Skybox::new(&ctr.display, "skybox1", APP_ID, 512, 50.).unwrap();
 
-	let mut lights_arr: [[f32; 3]; MAX_LIGHTS] = Default::default();
-	for i in 0..lights.len() { lights_arr[i] = lights[i]; }
+	let mut lights_arr: [Light; MAX_LIGHTS] = Default::default();
+	let mut light_iter = map.lights.values();
+	for i in 0..map.lights.len() { lights_arr[i] = *light_iter.next().unwrap(); }
 
 	let mut displace = 0.0f32;
 
@@ -147,14 +146,14 @@ fn main() {
 			perspective_mat: perspective_mat,
 			view_mat: player.camera.view_matrix(),
 			lights: lights_arr,
-			light_count: lights.len(),
+			light_count: map.lights.len(),
 			params: &ctr.params,
 			textures: &ctr.textures
 		};
 
 		target.clear_color_and_depth((0.85, 0.85, 0.85, 1.0), 1.0); 
 
-		for (key, o) in &map_obj {
+		for (key, o) in &map.objects {
 			let text_displace = if key.starts_with("water") {
 				Some([displace.sin() * 0.005, displace.sin() * 0.005])
 			} else { None };

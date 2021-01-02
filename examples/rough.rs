@@ -52,7 +52,7 @@ fn main() {
 		end_pos: [25., 25., 25.]
 	}, false);
 	let map = GameMap::load_map("models/map2", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
-		quadoctree).unwrap();
+		Some(quadoctree)).unwrap();
 
 	let wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
@@ -108,7 +108,7 @@ fn main() {
 
 		displace += time_delta;
 
-		player.update(time_delta, Some(&map.quadoctree), Some(&sound_stream), None);
+		player.update(time_delta, Some(map.quadoctree.as_ref().unwrap()), Some(&sound_stream), None);
 
 		let mut target = ctr.display.draw();
 
