@@ -1,3 +1,14 @@
-[lights]
-	att_linear = 3
-	att_constant = 5
+[lights."light_1.002_Cube.011"]
+att_quad = 1.0
+att_linear = 3.0
+att_constant = 0.0
+
+[lights."light_1_Cube.012"]
+att_quad = 1.0
+att_linear = 3.0
+att_constant = 0.0
+
+[lights."light_1.001_Cube.015"]
+att_quad = 0.3
+att_linear = 0.0
+att_constant = 0.0

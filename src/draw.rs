@@ -78,6 +78,7 @@ pub struct ObjDef {
 }
 
 #[derive(Copy, Clone, Deserialize)]
+#[serde(default)]
 pub struct Light {
 	pub position: [f32; 3],
 	pub att_linear: f32,

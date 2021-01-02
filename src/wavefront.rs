@@ -195,7 +195,8 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 
 	if MeshType::Light == mesh_type {
 		if let Some(lights) = lights {
-			lights.insert(o_name.as_ref().unwrap().clone(), Light { position: vertices[0].position, ..Default::default() });
+			lights.insert(o_name.as_ref().unwrap().to_string().trim().to_string(),
+				Light { position: vertices[0].position, ..Default::default() });
 		}
 	}
 
