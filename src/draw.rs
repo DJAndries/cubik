@@ -72,9 +72,10 @@ pub struct UIDrawInfo {
 }
 
 pub struct ObjDef {
+	pub position: [f32; 3],
 	pub vertices: VertexBuffer<Vertex>,
 	pub indices: IndexBuffer<u32>,
-	pub material: Option<MtlInfo>,
+	pub material: Option<MtlInfo>
 }
 
 #[derive(Copy, Clone, Deserialize)]
@@ -218,6 +219,7 @@ pub fn load_data_to_gpu(display: &Display, vertices: &[Vertex], indices: &[u32])
 	ObjDef {
 		vertices: glium::VertexBuffer::new(display, &vertices).unwrap(),
 		indices: glium::IndexBuffer::new(display, glium::index::PrimitiveType::TrianglesList, &indices).unwrap(),
+		position: vertices[0].position,
 		material: None
 	}
 }

@@ -14,6 +14,7 @@ use crate::assets::find_asset;
 const COLLISION_PREFIX: &str = "collision_";
 const LIGHT_PREFIX: &str = "light_";
 const TERRAIN_PREFIX: &str = "terrain_";
+const MISC_PREFIX: &str = "misc_";
 
 #[derive(Debug, derive_more::Display, Error, From)]
 pub enum WavefrontLoadError {
@@ -33,7 +34,8 @@ enum MeshType {
 	Normal,
 	Terrain,
 	Collision,
-	Light
+	Light,
+	Misc
 }
 
 fn parse_vertex_or_normal(split: &mut Split<char>, scale: &[f32; 3]) -> Result<[f32; 3], WavefrontLoadError> {
@@ -170,6 +172,7 @@ fn load_mtl(display: &Display, obj_split: &mut Split<char>, obj_parent_dir: &Pat
 
 fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>,
 	current_mtl: &Option<MtlInfo>, quadoctree: Option<&mut &mut QuadOctreeNode>, lights: Option<&mut &mut HashMap<String, Light>>,
+	misc_objs: Option<&mut &mut HashMap<String, [f32; 3]>>,
 	o_name: &mut Option<String>, result: &mut BTreeMap<String, ObjDef>) -> Result<(), WavefrontLoadError> {
 	let mesh_type = if o_name.as_ref().unwrap().starts_with(COLLISION_PREFIX) {
 		MeshType::Collision
@@ -177,6 +180,8 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 		MeshType::Light
 	} else if o_name.as_ref().unwrap().starts_with(TERRAIN_PREFIX) {
 		MeshType::Terrain
+	} else if o_name.as_ref().unwrap().starts_with(MISC_PREFIX) {
+		MeshType::Misc
 	} else { MeshType::Normal };
 
 	if let Some(display) = display {
@@ -184,6 +189,12 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 			let mut def = load_data_to_gpu(*display, &vertices, &indices);
 			def.material = Some(current_mtl.as_ref().unwrap().clone());
 			result.insert(o_name.as_ref().unwrap().clone(), def);
+		}
+	}
+
+	if MeshType::Misc == mesh_type {
+		if let Some(misc_objs) = misc_objs {
+			misc_objs.insert(o_name.as_ref().unwrap().to_string(), vertices[0].position);
 		}
 	}
 
@@ -207,8 +218,8 @@ fn process_obj(display: Option<&&Display>, vertices: &mut Vec<Vertex>, indices: 
 }
 
 pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, mut textures: Option<&mut HashMap<String, Texture2d>>,
-	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>,
-	mut lights: Option<&mut HashMap<String, Light>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
+	scale: &[f32; 3], mut quadoctree: Option<&mut QuadOctreeNode>, mut lights: Option<&mut HashMap<String, Light>>,
+	mut misc_objs: Option<&mut HashMap<String, [f32; 3]>>) -> Result<BTreeMap<String, ObjDef>, WavefrontLoadError> {
 	let path = find_asset(filename, app_id);
 	let f = File::open(path.as_path())?;
 	let mut f = BufReader::new(f);
@@ -254,7 +265,7 @@ pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, mut tex
 			"o" => {
 				if current_o_name.is_some() {
 					process_obj(display.as_ref(), &mut vertices, &mut indices, &current_mtl,
-						quadoctree.as_mut(), lights.as_mut(), &mut current_o_name, &mut result)?;
+						quadoctree.as_mut(), lights.as_mut(), misc_objs.as_mut(), &mut current_o_name, &mut result)?;
 				}
 				current_o_name = Some(split.next()
 					.ok_or(WavefrontLoadError::FormatError { msg: "o does not have a name" })?.to_string());
@@ -266,7 +277,7 @@ pub fn load_obj(filename: &str, app_id: &str, display: Option<&Display>, mut tex
 
 	if current_o_name.is_some() {
 		process_obj(display.as_ref(), &mut vertices, &mut indices, &current_mtl,
-			quadoctree.as_mut(), lights.as_mut(), &mut current_o_name, &mut result)?;
+			quadoctree.as_mut(), lights.as_mut(), misc_objs.as_mut(), &mut current_o_name, &mut result)?;
 	}
 
 	Ok(result)

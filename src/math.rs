@@ -23,8 +23,13 @@ pub fn mult_matrix3(a: &[[f32; 3]; 3], b: &[[f32; 3]; 3]) -> [[f32; 3]; 3] {
 	result
 }
 
+
+pub fn vector_length(input: &[f32; 3]) -> f32 {
+	(input[0] * input[0] + input[1] * input[1] + input[2] * input[2]).sqrt()
+}
+
 pub fn normalize_vector(input: &[f32; 3]) -> [f32; 3] {
-	let len = (input[0] * input[0] + input[1] * input[1] + input[2] * input[2]).sqrt();
+	let len = vector_length(input);
 	[input[0] / len, input[1] / len, input[2] / len]
 }
 
@@ -48,3 +53,10 @@ pub fn add_vector(a: &[f32; 3], b: &[f32; 3], b_mult: f32) -> [f32; 3] {
 	]
 }
 
+pub fn mult_vector(input: &[f32; 3], factor: f32) -> [f32; 3] {
+	[
+		input[0] * factor,
+		input[1] * factor,
+		input[2] * factor
+	]
+}

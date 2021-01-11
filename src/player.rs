@@ -11,11 +11,14 @@ use glium::glutin::dpi::PhysicalPosition;
 use serde::{Serialize, Deserialize};
 use crate::audio::{SoundData, SoundStream, create_sink, sound_decoder_from_data_looped};
 use rodio::Sink;
+use crate::interpolation::InterpolationHelper;
 
-const MOVE_RATE: f32 = 1.28;
+const DEFAULT_MOVE_RATE: f32 = 1.28;
 const MOUSE_SENSITIVITY: f32 = 1.8;
 const GRAVITY: f32 = 1.8;
 const JUMP_VELOCITY: f32 = 0.9;
+const CLIENT_UPDATE_INTERVAL: f32 = 0.017;
+const SERVER_UPDATE_INTERVAL: f32 = 0.1;
 
 pub enum PlayerControlType {	
 	MultiplayerServer,
@@ -55,6 +58,7 @@ pub struct Player {
 	pub player_cube_size: [f32; 3],
 	pub velocity: [f32; 3],
 	pub noclip: bool,
+	pub move_rate: f32,
 
 	pub walking_sound: Option<SoundData>,
 	walking_sound_sink: Option<Sink>,
@@ -63,6 +67,10 @@ pub struct Player {
 	pub is_moving: bool,
 
 	pub input_state: PlayerInputState,
+	net_update_time_count: f32,
+	input_changed: bool,
+
+	interpolation: InterpolationHelper<[f32; 3]>
 }
 
 impl Player {
@@ -76,17 +84,21 @@ impl Player {
 			player_cube_size: player_cube_size,
 			player_cube: player_cube,
 			velocity: [0., 0., 0.],
+			move_rate: DEFAULT_MOVE_RATE,
 			noclip: false,
 			is_colliding: false,
 			is_moving: false,
 			input_state: Default::default(),
+			net_update_time_count: 0.,
+			input_changed: false,
 			walking_sound: None,
-			walking_sound_sink: None
+			walking_sound_sink: None,
+			interpolation: InterpolationHelper::new()
 		}
 	}
 
 	fn input_update(&mut self, time_delta: f32) {
-		let move_len = MOVE_RATE * time_delta;
+		let move_len = self.move_rate * time_delta;
 
 		let move_dir = if !self.noclip {
 			[self.camera.direction[0], 0., self.camera.direction[2]]
@@ -186,23 +198,40 @@ impl Player {
 				}
 				self.input_update(time_delta);
 				self.collision_gravity_update(time_delta, quadoctree);
-				Some(PlayerControlMessage::Server {
-					position: self.camera.position,
-					yaw: self.camera.pitch_yaw.1,
-					is_moving: self.is_moving,
-					is_colliding: self.is_colliding
-				})
+				self.net_update_time_count += time_delta;
+				if self.net_update_time_count >= SERVER_UPDATE_INTERVAL {
+					self.net_update_time_count = 0.;
+					Some(PlayerControlMessage::Server {
+						position: self.camera.position,
+						yaw: self.camera.pitch_yaw.1,
+						is_moving: self.is_moving,
+						is_colliding: self.is_colliding
+					})
+				} else {
+					None
+				}
 			},
 			PlayerControlType::MultiplayerClient => {
 				if let Some(incoming_msg) = incoming_msg {
 					if let PlayerControlMessage::Server { position, is_moving, is_colliding, .. } = incoming_msg {
 						self.is_moving = is_moving;
 						self.is_colliding = is_colliding;
-						self.camera.position = position;
+						self.interpolation.post_update(position);
 					}
+					return None;
 				}
 				self.update_sound(sound_stream);
-				Some(PlayerControlMessage::Client { input_state: self.input_state, pitch_yaw: self.camera.pitch_yaw })
+				if let Some(value) = self.interpolation.value() {
+					self.camera.position = value;
+				}
+				self.net_update_time_count += time_delta;
+				if self.input_changed && self.net_update_time_count >= CLIENT_UPDATE_INTERVAL {
+					self.net_update_time_count = 0.;
+					self.input_changed = false;
+					Some(PlayerControlMessage::Client { input_state: self.input_state, pitch_yaw: self.camera.pitch_yaw })
+				} else {
+					None
+				}
 			},
 			PlayerControlType::Singleplayer => {
 				self.input_update(time_delta);
@@ -227,9 +256,10 @@ impl InputListener for Player {
 					if !pressed {
 						self.noclip = !self.noclip;
 					}
-				}
+				},
 				_ => return false
 			}
+			self.input_changed = true;
 			return true;
 		}
 		false
@@ -248,6 +278,7 @@ impl InputListener for Player {
 		self.camera.update_direction();
 
 		window.set_cursor_position(PhysicalPosition::new(middle.0, middle.1)).unwrap();
+		self.input_changed = true;
 		return true;
 	}
 

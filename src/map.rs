@@ -19,17 +19,21 @@ pub enum GameMapError {
 pub struct GameMap {
 	pub quadoctree: Option<QuadOctreeNode>,
 	pub lights: HashMap<String, Light>,
-	pub objects: BTreeMap<String, ObjDef>
+	pub misc_objs: HashMap<String, [f32; 3]>,
+	pub objects: BTreeMap<String, ObjDef>,
+	pub meta: toml::Value
 }
 
 impl GameMap {
-	fn load_meta(&mut self, path: &str, app_id: &str) -> Result<(), GameMapError> {
+	fn load_meta(path: &str, app_id: &str) -> Result<toml::Value, GameMapError> {
 		let mut file = File::open(find_asset(format!("{}{}", path, ".toml").as_str(), app_id))?;
 		let mut contents = String::new();
 		file.read_to_string(&mut contents)?;
-		let parsed = contents.parse::<toml::Value>().map_err(|_| GameMapError::BadTomlFile)?;
+		Ok(contents.parse::<toml::Value>().map_err(|_| GameMapError::BadTomlFile)?)
+	}
 
-		if let Some(lights) = parsed.get("lights") {
+	fn parse_meta(&mut self) -> Result<(), GameMapError> {
+		if let Some(lights) = self.meta.get("lights") {
 			if let Some(lights_table) = lights.as_table() {
 				for (name, light_info) in lights_table.iter() {
 					let mut light_meta: Light = light_info.clone().try_into().map_err(|_| GameMapError::BadLightDesc)?;
@@ -47,17 +51,22 @@ impl GameMap {
 	pub fn load_map(path: &str, app_id: &str, display: Option<&Display>, textures: Option<&mut HashMap<String, Texture2d>>,
 		mut quadoctree: Option<QuadOctreeNode>) -> Result<GameMap, GameMapError> {
 		let mut lights: HashMap<String, Light> = HashMap::new();
+		let mut misc_objs: HashMap<String, [f32; 3]> = HashMap::new();
 
 		let objects = load_obj(format!("{}{}", path, ".obj").as_str(), app_id, display, textures, &[1., 1., 1.],
-			quadoctree.as_mut(), Some(&mut lights))?;
+			quadoctree.as_mut(), Some(&mut lights), Some(&mut misc_objs))?;
+
+		let meta = Self::load_meta(path, app_id)?;
 
 		let mut result = Self {
 			lights: lights,
 			quadoctree: quadoctree,
-			objects: objects
+			objects: objects,
+			meta: meta,
+			misc_objs: misc_objs
 		};
 
-		result.load_meta(path, app_id)?;
+		result.parse_meta()?;
 
 		Ok(result)
 	}

@@ -8,6 +8,7 @@ use std::time::{Instant, Duration};
 use std::thread::sleep;
 use std::collections::HashMap;
 use crate::support::constants::APP_ID;
+use cubik::map::GameMap;
 
 const PORT: u16 = 27020;
 
@@ -19,13 +20,12 @@ fn main() {
 	let mut last_status_update = Instant::now();
 	let mut player_map: HashMap<u8, Player> = HashMap::new();
 
-	let mut quadoctree = QuadOctreeNode::new_tree(BoundingBox {
+	let quadoctree = QuadOctreeNode::new_tree(BoundingBox {
 		start_pos: [-25., -25., -25.],
 		end_pos: [25., 25., 25.]
 	}, false);
 
-	let _map_obj = cubik::wavefront::load_obj("models/map2.obj", APP_ID, None, None,
-		&[1., 1., 1.], Some(&mut quadoctree), None).unwrap();
+	let map = GameMap::load_map("models/map2", APP_ID, None, None, Some(quadoctree)).unwrap();
 
 	let mut last_time = Instant::now();
 
@@ -41,11 +41,14 @@ fn main() {
 			if let Ok(msgs) = server_container.get_msgs(pid) {
 				for msg in msgs {
 					if let AppMessage::PlayerChange { msg, .. } = msg {
-						player.update(0., Some(&quadoctree), None, Some(msg));
+						player.update(0., Some(map.quadoctree.as_ref().unwrap()), None, Some(msg));
 					}
 				}
+				
+			}
+			if let Some(msg) = player.update(last_time.elapsed().as_secs_f32(), Some(map.quadoctree.as_ref().unwrap()), None, None) {
 				server_container.broadcast(AppMessage::PlayerChange {
-					msg: player.update(last_time.elapsed().as_secs_f32(), Some(&quadoctree), None, None).unwrap(),
+					msg: msg,
 					player_id: pid
 				});
 			}

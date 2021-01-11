@@ -18,7 +18,7 @@ use support::msg::AppMessage;
 
 const PORT: u16 = 27020;
 
-fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut HashMap<u8, PeerPlayer>, player: &mut Player, sound_stream: &SoundStream) {
+fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut HashMap<u8, PeerPlayer>, player: &mut Player, sound_stream: &SoundStream, time_delta: f32) {
 	let pids = client_container.pids();
 	peer_map.retain(|&k, _| pids.contains(&k));
 
@@ -27,10 +27,7 @@ fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut
 	for msg in client_container.get_msgs() {
 		if let AppMessage::PlayerChange { msg, player_id } = msg {
 			if client_container.player_id.unwrap_or(0) == player_id {
-				client_container.send(AppMessage::PlayerChange {
-					player_id: 0,
-					msg: player.update(0., None, Some(sound_stream), Some(msg)).unwrap()
-				}).unwrap();
+				player.update(0., None, Some(sound_stream), Some(msg));
 			} else {
 				let peer_player = peer_map.entry(player_id)
 					.or_insert(PeerPlayer::new());
@@ -38,6 +35,13 @@ fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut
 				peer_player.update(msg);
 			}
 		}
+	}
+
+	if let Some(out_msg) = player.update(time_delta, None, Some(sound_stream), None) {
+		client_container.send(AppMessage::PlayerChange {
+			player_id: 0,
+			msg: out_msg
+		}).unwrap();
 	}
 }
 
@@ -67,7 +71,7 @@ fn main() {
 		Some(&ctr.display), Some(&mut ctr.textures), None).unwrap();
 
 	let wolf_standing = cubik::wavefront::load_obj("models/wolf_standing.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
-		&[1., 1., 1.], None, None).unwrap();
+		&[1., 1., 1.], None, None, None).unwrap();
 	let wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 
 	let skybox = Skybox::new(&ctr.display, "skybox1", APP_ID, 512, 50.).unwrap();
@@ -131,13 +135,13 @@ fn main() {
 			_ => return
 		}
 		
-		net_update(&mut client_container, &mut peer_map, &mut player, &sound_stream);
-
 		let new_frame_time = std::time::Instant::now();
 		let time_delta = new_frame_time.duration_since(last_frame_time).as_secs_f32();
 		last_frame_time = new_frame_time;
 
 		displace += time_delta;
+
+		net_update(&mut client_container, &mut peer_map, &mut player, &sound_stream, time_delta);
 
 		let mut target = ctr.display.draw();
 

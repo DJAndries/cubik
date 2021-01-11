@@ -21,6 +21,7 @@ pub mod peer_player;
 pub mod container;
 pub mod assets;
 pub mod map;
+pub mod interpolation;
 
 #[macro_use]
 pub extern crate glium;
