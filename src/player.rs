@@ -221,7 +221,7 @@ impl Player {
 					return None;
 				}
 				self.update_sound(sound_stream);
-				if let Some(value) = self.interpolation.value() {
+				if let Some(value) = self.interpolation.value(time_delta) {
 					self.camera.position = value;
 				}
 				self.net_update_time_count += time_delta;

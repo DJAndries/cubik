@@ -43,7 +43,7 @@ impl PeerPlayer {
 		}
 	}
 
-	pub fn update(&mut self, incoming_msg: Option<PlayerControlMessage>) {
+	pub fn update(&mut self, incoming_msg: Option<PlayerControlMessage>, time_delta: f32) {
 		if let Some(incoming_msg) = incoming_msg {
 			let was_walking = self.is_colliding && self.is_moving;
 			if let PlayerControlMessage::Server { position, yaw, is_colliding, is_moving } = incoming_msg {
@@ -61,7 +61,7 @@ impl PeerPlayer {
 			return;
 		}
 
-		if let Some(pos_yaw) = self.interpolation.value() {
+		if let Some(pos_yaw) = self.interpolation.value(time_delta) {
 			self.obj_draw_info.position = pos_yaw.pos;
 			self.obj_draw_info.rotation[1] = pos_yaw.yaw;
 			self.obj_draw_info.generate_matrix();

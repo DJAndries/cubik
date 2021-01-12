@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 pub trait Interpolate {
 	fn linear_interpolate(a: &Self, b: &Self, progress: f32) -> Self;
 }
@@ -21,35 +19,42 @@ impl Interpolate for [f32; 3] {
 }
 
 pub struct InterpolationHelper<T: Interpolate + Copy> {
-	pub updates: Vec<(T, Instant)>
+	pub updates: Vec<T>,
+	last_update_duration: f32,
+	time_count: f32
 }
 
 impl<T: Interpolate + Copy> InterpolationHelper<T> {
 	pub fn new() -> Self {
 		Self {
-			updates: Vec::new()
+			updates: Vec::new(),
+			time_count: 0.,
+			last_update_duration: 0.
 		}
 	}
 
 	pub fn post_update(&mut self, update: T) {
-		self.updates.push((update, Instant::now()));
+		self.updates.push(update);
 		if self.updates.len() > 2 {
 			self.updates.remove(0);
 		}
+		self.last_update_duration = self.time_count;
+		self.time_count = 0.
 	}
 
-	pub fn value(&self) -> Option<T> {
-		match self.updates.len() {
-			0 => None,
-			1 => Some(self.updates.first().as_ref().unwrap().0),
-			_ => {
-				let first = self.updates.first().unwrap();
-				let last = self.updates.last().unwrap();
-
-				let total_duration = last.1.duration_since(first.1).as_secs_f32();
-				let elapsed = Instant::now().duration_since(last.1).as_secs_f32();
-
-				Some(T::linear_interpolate(&first.0, &last.0, elapsed / total_duration))
+	pub fn value(&mut self, time_delta: f32) -> Option<T> {
+		match self.updates.first() {
+			None => None,
+			Some(first) => {
+				self.time_count += time_delta;
+				match self.updates.last() {
+					Some(last) => {
+						Some(T::linear_interpolate(&first, &last, self.time_count / self.last_update_duration))
+					},
+					None => {
+						Some(*first)
+					}
+				}
 			}
 		}
 	}

@@ -32,13 +32,13 @@ fn net_update(client_container: &mut ClientContainer<AppMessage>, peer_map: &mut
 				let peer_player = peer_map.entry(player_id)
 					.or_insert(PeerPlayer::new());
 
-				peer_player.update(Some(msg));
+				peer_player.update(Some(msg), time_delta);
 			}
 		}
 	}
 
 	for peer_player in peer_map.values_mut() {
-		peer_player.update(None);
+		peer_player.update(None, time_delta);
 	}
 
 	if let Some(out_msg) = player.update(time_delta, None, Some(sound_stream), None) {
