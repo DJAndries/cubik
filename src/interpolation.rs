@@ -8,6 +8,15 @@ impl Interpolate for f32 {
 	}
 }
 
+impl Interpolate for (f32, f32) {
+	fn linear_interpolate(a: &Self, b: &Self, progress: f32) -> Self {
+		(
+			a.0 + ((b.0 - a.0) * progress),
+			a.1 + ((b.1 - a.1) * progress)
+		)
+	}
+}
+
 impl Interpolate for [f32; 3] {
 	fn linear_interpolate(a: &Self, b: &Self, progress: f32) -> Self {
 		[
