@@ -6,7 +6,6 @@ use cubik::draw::{ObjDrawInfo, EnvDrawInfo, basic_render, MAX_LIGHTS, Light};
 use cubik::camera::perspective_matrix;
 
 use cubik::input::{InputListener, process_input_event, center_cursor};
-use cubik::quadoctree::{QuadOctreeNode, BoundingBox};
 
 use cubik::skybox::Skybox;
 use cubik::animation::ObjAnimation;
@@ -47,12 +46,8 @@ fn main() {
 	play_sound_from_file(&sound_stream, "./audio/ding.wav", APP_ID).unwrap();
 	player.walking_sound = Some(buffer_sound("./audio/running.wav", APP_ID).unwrap());
 	
-	let quadoctree = QuadOctreeNode::new_tree(BoundingBox {
-		start_pos: [-25., -25., -25.],
-		end_pos: [25., 25., 25.]
-	}, false);
 	let map = GameMap::load_map("models/map2", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
-		Some(quadoctree)).unwrap();
+		true).unwrap();
 
 	let wolf_anim = ObjAnimation::load_wavefront("models/wolfrunning", APP_ID, &ctr.display, &mut ctr.textures, 0.041).unwrap();
 

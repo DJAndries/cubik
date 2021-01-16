@@ -20,12 +20,7 @@ fn main() {
 	let mut last_status_update = Instant::now();
 	let mut player_map: HashMap<u8, Player> = HashMap::new();
 
-	let quadoctree = QuadOctreeNode::new_tree(BoundingBox {
-		start_pos: [-25., -25., -25.],
-		end_pos: [25., 25., 25.]
-	}, false);
-
-	let map = GameMap::load_map("models/map2", APP_ID, None, None, Some(quadoctree)).unwrap();
+	let map = GameMap::load_map("models/map2", APP_ID, None, None, true).unwrap();
 
 	let mut last_time = Instant::now();
 

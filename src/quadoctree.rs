@@ -1,11 +1,9 @@
 use derive_more::{Display, Error};
 use crate::draw::Vertex;
 
-const BUCKET_CAPACITY: usize = 384;
-
 #[derive(Debug, Display, Error)]
 pub enum QuadOctreeError {
-	BucketFull
+	BucketFull { depth: usize }
 }
 
 pub struct BoundingBox {
@@ -13,7 +11,7 @@ pub struct BoundingBox {
 	pub end_pos: [f32; 3]
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum CollisionObj {
 	Triangle([[f32; 3]; 3]),
 	Polygon(Vec<Vertex>, [f32; 3])
@@ -24,25 +22,31 @@ pub struct QuadOctreeNode {
 	items: Vec<CollisionObj>,
 	bbox: BoundingBox,
 
-	is_octree: bool
+	is_octree: bool,
+	capacity: usize,
+	depth: usize
 }
 
 impl QuadOctreeNode {
-	pub fn new(bbox: BoundingBox, is_octree: bool) -> QuadOctreeNode {
+	pub fn new(bbox: BoundingBox, is_octree: bool, capacity: usize, depth: usize) -> QuadOctreeNode {
 		QuadOctreeNode {
 			child_nodes: None,
-			items: Vec::with_capacity(BUCKET_CAPACITY),
+			items: Vec::with_capacity(capacity),
 			bbox: bbox,
-			is_octree: is_octree
+			is_octree: is_octree,
+			capacity: capacity,
+			depth: depth
 		}
 	}
 
-	pub fn new_tree(bbox: BoundingBox, is_octree: bool) -> QuadOctreeNode {
+	pub fn new_tree(bbox: BoundingBox, is_octree: bool, bucket_capacity: usize) -> QuadOctreeNode {
 		QuadOctreeNode {
 			child_nodes: None,
-			items: Vec::with_capacity(BUCKET_CAPACITY),
+			items: Vec::with_capacity(bucket_capacity),
 			bbox: bbox,
-			is_octree: is_octree
+			is_octree: is_octree,
+			depth: 1,
+			capacity: bucket_capacity
 		}
 	}
 }
@@ -54,48 +58,50 @@ fn create_sub_nodes(node: &mut QuadOctreeNode) {
 		node.bbox.start_pos[2] + ((node.bbox.end_pos[2] - node.bbox.start_pos[2]) / 2.)
 	];
 
+	let new_depth = node.depth + 1;
+
 	node.child_nodes = Some(if node.is_octree {
 		vec![
 			// back left lower
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: node.bbox.start_pos,
 				end_pos: mid_pos
-			}, true),
+			}, true, node.capacity, new_depth),
 			// back right lower
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [mid_pos[0], node.bbox.start_pos[1], node.bbox.start_pos[2]],
 				end_pos: [node.bbox.end_pos[0], mid_pos[1], mid_pos[2]]
-			}, true),
+			}, true, node.capacity, new_depth),
 			// front left lower
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [node.bbox.start_pos[0], node.bbox.start_pos[1], mid_pos[2]],
 				end_pos: [mid_pos[0], mid_pos[1], node.bbox.end_pos[2]]
-			}, true),
+			}, true, node.capacity, new_depth),
 			// front right lower
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [mid_pos[0], node.bbox.start_pos[1], mid_pos[2]],
 				end_pos: [node.bbox.end_pos[0], mid_pos[1], node.bbox.end_pos[2]]
-			}, true),
+			}, true, node.capacity, new_depth),
 			// back left upper
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [node.bbox.start_pos[0], mid_pos[1], node.bbox.start_pos[2]],
 				end_pos: [mid_pos[0], node.bbox.end_pos[1], mid_pos[1]]
-			}, true),
+			}, true, node.capacity, new_depth),
 			// back right upper
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [mid_pos[0], mid_pos[1], node.bbox.start_pos[2]],
 				end_pos: [node.bbox.end_pos[0], node.bbox.end_pos[1], mid_pos[2]]
-			}, true),
+			}, true, node.capacity, new_depth),
 			// front left upper
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [node.bbox.start_pos[0], mid_pos[1], mid_pos[2]],
 				end_pos: [mid_pos[0], node.bbox.end_pos[1], node.bbox.end_pos[2]]
-			}, true),
+			}, true, node.capacity, new_depth),
 			// front right upper
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: mid_pos,
 				end_pos: node.bbox.end_pos
-			}, true)
+			}, true, node.capacity, new_depth)
 		]
 	} else {
 		vec![
@@ -103,22 +109,22 @@ fn create_sub_nodes(node: &mut QuadOctreeNode) {
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: node.bbox.start_pos,
 				end_pos: [mid_pos[0], node.bbox.end_pos[1], mid_pos[2]]
-			}, false),
+			}, false, node.capacity, new_depth),
 			// back right
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [mid_pos[0], node.bbox.start_pos[1], node.bbox.start_pos[2]],
 				end_pos: [node.bbox.end_pos[0], node.bbox.end_pos[1], mid_pos[2]]
-			}, false),
+			}, false, node.capacity, new_depth),
 			// front left
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [node.bbox.start_pos[0], node.bbox.start_pos[1], mid_pos[2]],
 				end_pos: [mid_pos[0], node.bbox.end_pos[1], node.bbox.end_pos[2]]
-			}, false),
+			}, false, node.capacity, new_depth),
 			// front right
 			QuadOctreeNode::new(BoundingBox {
 				start_pos: [mid_pos[0], node.bbox.start_pos[1], mid_pos[2]],
 				end_pos: [node.bbox.end_pos[0], node.bbox.end_pos[1], node.bbox.end_pos[2]]
-			}, false)
+			}, false, node.capacity, new_depth)
 		]
 	});
 }
@@ -156,8 +162,8 @@ fn insert_helper(node: &mut QuadOctreeNode, obj: CollisionObj) -> Result<(), Qua
 			return insert_quadoctree_item(child_node, obj);
 		}
 	}
-	if node.items.len() >= BUCKET_CAPACITY {
-		return Err(QuadOctreeError::BucketFull);
+	if node.items.len() >= node.capacity {
+		return Err(QuadOctreeError::BucketFull { depth: node.depth });
 	}
 	node.items.push(obj);
 	Ok(())
@@ -165,7 +171,7 @@ fn insert_helper(node: &mut QuadOctreeNode, obj: CollisionObj) -> Result<(), Qua
 
 pub fn insert_quadoctree_item(node: &mut QuadOctreeNode, obj: CollisionObj) -> Result<(), QuadOctreeError> {
 	if node.child_nodes.is_none() {
-		if node.items.len() < BUCKET_CAPACITY {
+		if node.items.len() < node.capacity {
 			node.items.push(obj);
 			return Ok(());
 		}

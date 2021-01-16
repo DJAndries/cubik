@@ -72,7 +72,7 @@ fn main() {
 	player.walking_sound = Some(buffer_sound("./audio/running.wav", APP_ID).unwrap());
 	
 	let map = GameMap::load_map("models/map2", APP_ID,
-		Some(&ctr.display), Some(&mut ctr.textures), None).unwrap();
+		Some(&ctr.display), Some(&mut ctr.textures), false).unwrap();
 
 	let wolf_standing = cubik::wavefront::load_obj("models/wolf_standing.obj", APP_ID, Some(&ctr.display), Some(&mut ctr.textures),
 		&[1., 1., 1.], None, None, None).unwrap();

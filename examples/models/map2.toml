@@ -12,3 +12,9 @@ att_constant = 0.0
 att_quad = 0.3
 att_linear = 0.0
 att_constant = 0.0
+
+[quadoctree]
+start_pos = [ -51.0, -51.0, -51.0 ]
+end_pos = [ 51.0, 51.0, 51.0 ]
+is_octree = false
+bucket_capacity = 301
