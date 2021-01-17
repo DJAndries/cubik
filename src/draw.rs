@@ -44,7 +44,8 @@ pub struct ObjDrawInfo {
 	pub position: [f32; 3],
 	pub rotation: [f32; 3],
 	pub scale: [f32; 3],
-	pub model_mat: Option<[[f32; 4]; 4]>
+	pub model_mat: Option<[[f32; 4]; 4]>,
+	pub color: [f32; 3]
 }
 
 impl Default for ObjDrawInfo {
@@ -53,6 +54,7 @@ impl Default for ObjDrawInfo {
 			position: [0., 0., 0.],
 			rotation: [0., 0., 0.],
 			scale: [1., 1., 1.],
+			color: [1., 1., 1.],
 			model_mat: None
 		};
 		result.generate_matrix();
@@ -104,7 +106,8 @@ struct BasicDrawUniforms<'a> {
 	model: [[f32; 4]; 4],
 	view: [[f32; 4]; 4],
 	perspective: [[f32; 4]; 4],
-	shape_color: [f32; 3],
+	mtl_color: [f32; 3],
+	obj_color: [f32; 3],
 	texcoord_displacement: [f32; 2],
 	min_text_val: [f32; 4],
 	tex: &'a Texture2d
@@ -122,7 +125,8 @@ impl Uniforms for BasicDrawUniforms<'_> {
 		func("model", UniformValue::Mat4(self.model));
 		func("view", UniformValue::Mat4(self.view));
 		func("perspective", UniformValue::Mat4(self.perspective));
-		func("shape_color", UniformValue::Vec3(self.shape_color));
+		func("mtl_color", UniformValue::Vec3(self.mtl_color));
+		func("obj_color", UniformValue::Vec3(self.obj_color));
 		func("texcoord_displacement", UniformValue::Vec2(self.texcoord_displacement));
 		func("tex", UniformValue::Texture2d(self.tex, None));
 		func("min_text_val", UniformValue::Vec4(self.min_text_val));
@@ -232,7 +236,8 @@ pub fn basic_render(target: &mut Frame, env_info: &EnvDrawInfo, obj_info: &ObjDr
 		perspective: env_info.perspective_mat,
 		lights: env_info.lights,
 		light_count: env_info.light_count as i32,
-		shape_color: obj_def.material.as_ref().unwrap().color,
+		mtl_color: obj_def.material.as_ref().unwrap().color,
+		obj_color: obj_info.color,
 		texcoord_displacement: texcoord_displacement.unwrap_or([0., 0.]),
 		min_text_val: if obj_def.material.as_ref().unwrap().diffuse_texture.is_none() { [1., 1., 1., 1.0f32] } else { [0., 0., 0., 0.0f32] },
 		tex: env_info.textures.get(

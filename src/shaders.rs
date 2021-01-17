@@ -29,8 +29,7 @@ pub fn main_program(display: &Display) -> glium::Program {
 
 	void main() {
 		mat4 modelview = view * model;
-		// v_normal = transpose(inverse(mat3(modelview))) * normal;
-		v_normal = mat3(modelview) * normal;
+		v_normal = transpose(inverse(mat3(modelview))) * normal;
 		gl_Position = perspective * modelview * vec4(position, 1.0);
 		v_position = vec3(modelview * vec4(position, 1.0));
 
@@ -59,7 +58,8 @@ pub fn main_program(display: &Display) -> glium::Program {
 	in vec3 v_lights_positions[MAX_LIGHTS];
 
 	out vec4 color;
-	uniform vec3 shape_color;
+	uniform vec3 mtl_color;
+	uniform vec3 obj_color;
 
 	uniform sampler2D tex;
 	uniform vec2 texcoord_displacement;
@@ -80,16 +80,16 @@ pub fn main_program(display: &Display) -> glium::Program {
 			vec3 light_dir = normalize(v_lights_positions[i] - v_position);
 			float diffuse = max(dot(norm, light_dir), 0.0) * diffuse_val;
 
-			// vec3 view_dir = normalize(-v_position);
-			// vec3 reflect_dir = reflect(-light_dir, norm);
-			// float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 256.0);
+			vec3 view_dir = normalize(-v_position);
+			vec3 reflect_dir = reflect(-light_dir, norm);
+			float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 256.0);
 
 			float distance = length(v_lights_positions[i] - v_position);
 			float attenuation = 1.0 / (lights[i].att_constant + (lights[i].att_linear * distance) +
 				(lights[i].att_quad * distance * distance));
 
-			// color += vec4((diffuse * shape_color * text_val.rgb) + (specular * specular_val), 0.0) * attenuation;
-			color += vec4((diffuse * shape_color * text_val.rgb), 0.0) * attenuation;
+			color += vec4((diffuse * mtl_color * obj_color * text_val.rgb)
+				+ (specular * specular_val), 0.0) * attenuation;
 		}
 	}
 	"#;

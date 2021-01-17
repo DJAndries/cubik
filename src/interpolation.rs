@@ -47,23 +47,20 @@ impl<T: Interpolate + Copy> InterpolationHelper<T> {
 		if self.updates.len() > 2 {
 			self.updates.remove(0);
 		}
-		self.last_update_duration = self.time_count;
+		self.last_update_duration = self.time_count.max(0.1);
 		self.time_count = 0.
 	}
 
 	pub fn value(&mut self, time_delta: f32) -> Option<T> {
-		match self.updates.first() {
-			None => None,
-			Some(first) => {
-				self.time_count += time_delta;
-				match self.updates.last() {
-					Some(last) => {
-						Some(T::linear_interpolate(&first, &last, self.time_count / self.last_update_duration))
-					},
-					None => {
-						Some(*first)
-					}
-				}
+		self.time_count += time_delta;
+		let len = self.updates.len();
+		match len {
+			0 => None,
+			1 => Some(*self.updates.first().unwrap()),
+			_ => {
+				let first = self.updates.first().unwrap();
+				let last = self.updates.last().unwrap();
+				Some(T::linear_interpolate(&first, &last, self.time_count / self.last_update_duration))
 			}
 		}
 	}
