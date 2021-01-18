@@ -18,7 +18,7 @@ const MOUSE_SENSITIVITY: f32 = 1.8;
 const GRAVITY: f32 = 1.8;
 const JUMP_VELOCITY: f32 = 0.9;
 const CLIENT_UPDATE_INTERVAL: f32 = 0.017;
-const SERVER_UPDATE_INTERVAL: f32 = 0.1;
+const SERVER_UPDATE_INTERVAL: f32 = 0.15;
 
 pub enum PlayerControlType {	
 	MultiplayerServer,

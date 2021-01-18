@@ -22,6 +22,7 @@ pub mod container;
 pub mod assets;
 pub mod map;
 pub mod interpolation;
+pub mod fps_count;
 
 #[macro_use]
 pub extern crate glium;
