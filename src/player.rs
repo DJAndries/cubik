@@ -60,6 +60,8 @@ pub struct Player {
 	pub noclip: bool,
 	pub move_rate: f32,
 
+	pub start_position: [f32; 3],
+
 	pub walking_sound: Option<SoundData>,
 	walking_sound_sink: Option<Sink>,
 
@@ -83,6 +85,7 @@ impl Player {
 			player_cube_offset: player_cube_offset,
 			player_cube_size: player_cube_size,
 			player_cube: player_cube,
+			start_position: position,
 			velocity: [0., 0., 0.],
 			move_rate: DEFAULT_MOVE_RATE,
 			noclip: false,
@@ -95,6 +98,10 @@ impl Player {
 			walking_sound_sink: None,
 			interpolation: InterpolationHelper::new()
 		}
+	}
+
+	pub fn respawn(&mut self) {
+		self.camera.position = self.start_position;
 	}
 
 	fn input_update(&mut self, time_delta: f32) {
