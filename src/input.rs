@@ -20,7 +20,8 @@ pub fn process_input_event(ev: WindowEvent, listeners: Vec<&mut dyn InputListene
 			},
 			WindowEvent::CursorMoved { position, .. } => {
 				let dim = display.gl_window().window().inner_size();
-				let ev_pos = ((position.x as f32) / (dim.width as f32) * 2. - 1.,
+				let ratio = (dim.width as f32) / (dim.height as f32);
+				let ev_pos = ((position.x as f32) / (dim.width as f32) * (ratio * 2.) - ratio,
 					-((position.y as f32) / (dim.height as f32) * 2. - 1.));
 				listener.handle_mouse_pos_ev(ev_pos, display)
 			},

@@ -100,6 +100,11 @@ impl TextInput {
 		self.display_text.ui_draw_info.left_clip = self.pos.0;
 	}
 
+	pub fn reset(&mut self) {
+		self.text = String::new();
+		self.gen_display_text();
+	}
+
 	pub fn draw(&mut self, target: &mut Frame, display: &Display, ui_program: &glium::Program, font: &LoadedFont) -> Result<(), UIError> {
 		let text_width = self.display_text.measure_width(font)? * self.size.1;
 		if text_width > (self.size.0 + self.text_x_offset) {
