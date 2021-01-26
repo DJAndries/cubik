@@ -189,7 +189,7 @@ impl UIDrawInfo {
 			left_clip: -4.,
 			screen_left_clip: -4.,
 			screen_dim: (0, 0),
-			translate_after_scale: false
+			translate_after_scale: true
 		}
 	}
 

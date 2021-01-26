@@ -94,14 +94,12 @@ impl LoadedFont {
 impl FontText {
 	pub fn new(text: String, size: f32, pos: (f32, f32), align: TextAlign) -> Self {
 		let text_len = text.len();
-		let mut ui_draw_info = UIDrawInfo::new(pos, (size, size));
-		ui_draw_info.translate_after_scale = true;
 		Self {
 			text: text,
 			align: align,
 			last_font_hash: 0,
 			chars: Vec::with_capacity(text_len),
-			ui_draw_info: ui_draw_info
+			ui_draw_info: UIDrawInfo::new(pos, (size, size))
 		}
 	}
 	

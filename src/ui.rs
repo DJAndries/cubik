@@ -183,3 +183,53 @@ impl ImageBackground {
 	}
 }
 
+pub struct ImageButton {
+	background: ImageBackground,
+	normal_color: [f32; 4],
+	hover_color: [f32; 4],
+	half_size: (f32, f32),
+	is_hovering: bool
+}
+
+impl ImageButton {
+	pub fn new(background: ImageBackground, half_size: (f32, f32), normal_color: [f32; 4], hover_color: [f32; 4]) -> Self {
+		Self {
+			background: background,
+			normal_color: normal_color,
+			hover_color: hover_color,
+			half_size: half_size,
+			is_hovering: false
+		}
+	}
+
+	pub fn draw(&mut self, target: &mut Frame, ui_program: &glium::Program) {
+		self.background.draw(target, ui_program);
+	}
+}
+
+impl InputListener for ImageButton {
+	fn handle_char_ev(&mut self, _ch: char) -> bool {
+		false
+	}
+
+	fn handle_key_ev(&mut self, _key: Option<VirtualKeyCode>, _pressed: bool) -> bool {
+		false
+	}
+
+	fn handle_mouse_pos_ev(&mut self, mouse_pos: (f32, f32), _display: &Display) -> bool {
+		let pos = self.background.ui_draw_info.position;
+		self.is_hovering = mouse_pos.0 >= (pos.0 - self.half_size.0)
+			&& mouse_pos.0 < (pos.0 + self.half_size.0)
+			&& mouse_pos.1 >= (pos.1 - self.half_size.1)
+			&& mouse_pos.1 < (pos.1 + self.half_size.1);
+		self.background.ui_draw_info.color = if self.is_hovering { self.hover_color } else { self.normal_color };
+		false
+	}
+
+	fn handle_mouse_ev(&mut self, button: MouseButton, state: ElementState) -> bool {
+		if self.is_hovering && state == ElementState::Released && button == MouseButton::Left {
+			return true;
+		}
+		false
+	}
+}
