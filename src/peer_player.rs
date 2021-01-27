@@ -71,14 +71,14 @@ impl PeerPlayer {
 	pub fn draw(&mut self, target: &mut Frame, env_info: &EnvDrawInfo, program: &Program,
 		moving_animation: &ObjAnimation, stand_model: &BTreeMap<String, ObjDef>, jump_model: &BTreeMap<String, ObjDef>) {
 		
-		let model = if self.is_moving {
-			if self.is_colliding {
+		let model = if self.is_colliding {
+			if self.is_moving {
 				moving_animation.get_keyframe(self.animation_time.elapsed().as_secs_f32())
 			} else {
-				jump_model
+				stand_model
 			}
 		} else {
-			stand_model
+			jump_model
 		};
 			
 		for def in model.values() {

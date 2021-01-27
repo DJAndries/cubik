@@ -23,17 +23,14 @@ fn main() {
 	let event_loop = glutin::event_loop::EventLoop::new();
 	let mut ctr = RenderContainer::new(&event_loop, 1280, 720, "Example", false);
 
-	let mut map_info = ObjDrawInfo {
-		position: [0.0, 0.0, 0.0f32], rotation: [0.0, 0.0, 0.0f32],
-		scale: [1.0, 1.0, 1.0],
-		model_mat: None 
-	};
+	let mut map_info: ObjDrawInfo = Default::default();
 	map_info.generate_matrix();
 
 	let mut wolf_info = ObjDrawInfo {
 		position: [0.4, 0.05, 0.0f32],
 		rotation: [0.0, 0.0, 0.0f32],
-		scale: [1.0, 1.0, 1.0],
+		scale: [1., 1., 1.],
+		color: [1., 1., 1.],
 		model_mat: None 
 	};
 	wolf_info.generate_matrix();

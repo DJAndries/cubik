@@ -176,7 +176,9 @@ impl Player {
 			for poly_collide in &collide_result.polygons {
 				self.camera.position = add_vector(&self.camera.position, &poly_collide, 1.);
 				self.fix_velocity(&poly_collide);
-				self.maybe_jump();
+				if normalize_vector(&poly_collide)[1] > 0.5 {
+					self.maybe_jump();
+				}
 				self.is_colliding = true;
 			}
 			if let Some(tri_intersect) = collide_result.triangle {
