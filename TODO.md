@@ -1,4 +1,5 @@
 # big features
+- vbo sharing between objects within wavefront
 - materials
 - weapon
 - npc
