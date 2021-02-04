@@ -1,23 +1,37 @@
 use std::path::{Path, PathBuf};
+use std::env::current_exe;
 
-const PREFIXES: [(&'static str, bool); 5] = [
-	("examples", false),
-	("..", false),
-	("../..", false),
-	("../../..", false),
-	("/usr/share/", true)
+struct Prefix {
+	path: &'static str,
+	append_app_id: bool,
+	relative_to_binary: bool
+}
+
+const PREFIXES: [Prefix; 6] = [
+	Prefix { path: "examples", append_app_id: false, relative_to_binary: false },
+	Prefix { path: "..", append_app_id: false, relative_to_binary: false },
+	Prefix { path: "../..", append_app_id: false, relative_to_binary: false },
+	Prefix { path: "../../..", append_app_id: false, relative_to_binary: false },
+	Prefix { path: "/usr/share", append_app_id: true, relative_to_binary: false },
+	Prefix { path: "../Resources", append_app_id: false, relative_to_binary: true }
 ];
 
 pub fn find_asset(path: &str, app_id: &str) -> PathBuf {
 	let path = Path::new(path);
 
 	if !path.exists() {
-		for (prefix, add_id) in &PREFIXES {
-			let mut prefix = String::from(*prefix);
-			if *add_id {
-				prefix.push_str(app_id);
+		for prefix in &PREFIXES {
+			let mut new_path = if prefix.relative_to_binary {
+				let mut p = current_exe().unwrap();
+				p.pop();
+				p
+			} else {
+				Path::new(prefix.path).to_path_buf()
+			};
+			if prefix.append_app_id {
+				new_path.push(app_id);
 			}
-			let new_path = Path::new(&prefix).join(path);
+			new_path.push(path);
 			if new_path.exists() {
 				return new_path;
 			}

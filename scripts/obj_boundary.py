@@ -2,14 +2,14 @@
 
 import sys
 
-if len(sys.argv) != 2:
+if len(sys.argv) < 2:
 	print(f'usage: {sys.argv[0]} <obj path>', file=sys.stderr)
 	sys.exit(1)
 
 min = [sys.float_info.max, sys.float_info.max, sys.float_info.max]
 max = [sys.float_info.min, sys.float_info.min, sys.float_info.min]
 
-f = open(sys.argv[1], 'r')
+f = open(sys.argv[-1], 'r')
 for line in f:
 	if not line.startswith('v '):
 		continue
