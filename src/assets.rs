@@ -24,7 +24,7 @@ pub fn find_asset(path: &str, app_id: &str) -> PathBuf {
 			let mut new_path = if prefix.relative_to_binary {
 				let mut p = current_exe().unwrap();
 				p.pop();
-				p
+				p.join(prefix.path)
 			} else {
 				Path::new(prefix.path).to_path_buf()
 			};
