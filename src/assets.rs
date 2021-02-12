@@ -12,7 +12,7 @@ const PREFIXES: [Prefix; 6] = [
 	Prefix { path: "..", append_app_id: false, relative_to_binary: false },
 	Prefix { path: "../..", append_app_id: false, relative_to_binary: false },
 	Prefix { path: "../../..", append_app_id: false, relative_to_binary: false },
-	Prefix { path: "/usr/share", append_app_id: true, relative_to_binary: false },
+	Prefix { path: "/usr/lib", append_app_id: true, relative_to_binary: false },
 	Prefix { path: "../Resources", append_app_id: false, relative_to_binary: true }
 ];
 
