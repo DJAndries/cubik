@@ -1,7 +1,11 @@
-use glium::{glutin::{self, event_loop::EventLoop}, Display, Program, DrawParameters, texture::Texture2d};
+use glium::glutin::{self, event_loop::EventLoop, window::WindowBuilder, dpi::PhysicalSize};
+use glium::{Display, Program, DrawParameters, texture::Texture2d};
 use crate::textures::create_texture_map;
 use std::collections::HashMap;
 use crate::shaders;
+
+#[cfg(windows)]
+use glium::glutin::platform::windows::WindowBuilderExtWindows;
 
 pub struct RenderContainer<'a> {
 	pub display: Display,
@@ -16,11 +20,24 @@ pub struct RenderContainer<'a> {
 }
 
 impl RenderContainer<'_> {
+	#[cfg(windows)]
+	fn create_window_builder(init_size: PhysicalSize<u32>, title: &str) -> WindowBuilder {
+		glutin::window::WindowBuilder::new()
+			.with_drag_and_drop(false)
+			.with_title(title)
+			.with_inner_size(init_size)
+	}
+
+	#[cfg(unix)]
+	fn create_window_builder(init_size: PhysicalSize<u32>, title: &str) -> WindowBuilder {
+		glutin::window::WindowBuilder::new()
+			.with_title(title)
+			.with_inner_size(init_size)
+	}
+
 	pub fn new(event_loop: &EventLoop<()>, width: usize, height: usize, title: &str, fullscreen: bool) -> Self {
 		let init_size = glutin::dpi::PhysicalSize { width: width as u32, height: height as u32 };
-		let wb = glutin::window::WindowBuilder::new()
-			.with_title(title)
-			.with_inner_size(init_size);
+		let wb = Self::create_window_builder(init_size, title); 
 		let cb = glutin::ContextBuilder::new();
 		let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
