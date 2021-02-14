@@ -13,4 +13,4 @@ for collection in bpy.data.collections:
 		bpy.context.active_object.name = collection.name[:-6]
 		bpy.ops.object.select_all(action='DESELECT')
 
-bpy.ops.export_scene.obj(filepath=sys.argv[-1])
+bpy.ops.export_scene.obj(filepath=sys.argv[-1], path_mode='RELATIVE')
