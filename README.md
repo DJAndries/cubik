@@ -4,6 +4,8 @@
 
 OpenGL/glium-based multiplayer 3D game framework written in Rust.
 
+[Documentation](https://docs.rs/cubik/0.1.0/cubik/)
+
 ![Cubik](doc/cubik.png)
 
 ## Features
